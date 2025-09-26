@@ -7,7 +7,7 @@ use App\Models\Huespedes;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
-class HuespedController extends Controller
+class HuespedControllerold extends Controller
 {
     public function index()
     {

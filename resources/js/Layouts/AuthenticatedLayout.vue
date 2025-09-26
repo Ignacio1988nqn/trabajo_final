@@ -45,6 +45,13 @@ const showingNavigationDropdown = ref(false);
                                 >
                                     Huesped
                                 </NavLink>
+                                <!-- Link de Reservas (desktop) -->
+                        <NavLink
+                :href="route('reservas.index')"
+                :active="route().current('reservas.*')"
+                    >
+                         Reservas
+                        </NavLink>
                             </div>
                         </div>
 
