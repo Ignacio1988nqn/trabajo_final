@@ -10,9 +10,15 @@ use App\Models\Gastos;
 
 class Reservas extends Model
 {
-   protected $table = 'reservas';
+    protected $table = 'reservas';
     protected $fillable = ['huesped_id', 'fecha_checkin', 'fecha_checkout', 'estado', 'usuario_id'];
     public $timestamps = false; // Usamos fecha_reserva
+
+    protected $casts = [
+        'fecha_reserva' => 'datetime',
+        'fecha_checkin' => 'datetime',
+        'fecha_checkout' => 'datetime',
+    ];
 
     // Relaciones
     public function huesped()

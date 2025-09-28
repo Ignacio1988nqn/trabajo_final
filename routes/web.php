@@ -1,12 +1,15 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
+
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\HuespedController;
-use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\ReservaController;
-
+use App\Http\Controllers\CheckinController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\GastosController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -53,5 +56,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/huespedes/buscar',     [ReservaController::class, 'buscarHuespedes'])->name('huespedes.buscar');
 });
 
+Route::get('/checkin', [CheckinController::class, 'index'])->name('checkin.index');
+Route::post('/checkin/{reserva}', [CheckinController::class, 'checkin'])->name('checkin.store');
+
+Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+Route::post('/checkout/{reserva}', [CheckoutController::class, 'checkout'])->name('checkout.store');
+
+Route::get('/reservas/{reserva}/gastos/create', [GastosController::class, 'create'])->name('gastos.create');
+Route::get('/gastos', [GastosController::class, 'index'])->name('gastos.index');
+Route::get('/gastos/{reserva}', [GastosController::class, 'show'])->name('gastos.show');
+Route::post('/gastos', [GastosController::class, 'store'])->name('gastos.store');
 
 require __DIR__ . '/auth.php';

@@ -8,13 +8,41 @@ defineProps({
 });
 
 const destroy = (id) => {
-    if (confirm('¿Estás seguro de eliminar este huésped?')) {
-        router.delete(route('huesped.destroy', id));
-    }
+    Swal.fire({
+        title: '¿Estás seguro?',
+        text: '¿Confirmas que deseas eliminar este huésped? Esta acción no se puede deshacer.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            router.delete(route('huesped.destroy', id), {
+                onSuccess: () => {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: 'El huésped ha sido eliminado correctamente.',
+                        confirmButtonText: 'Aceptar',
+                    });
+                },
+                onError: (errors) => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '¡Error!',
+                        text: 'Hubo un error al eliminar el huésped.',
+                        confirmButtonText: 'Aceptar',
+                    });
+                },
+            });
+        }
+    });
 };
+
 </script>
 
 <template>
+
     <Head title="Huéspedes" />
 
     <AuthenticatedLayout>
@@ -32,7 +60,7 @@ const destroy = (id) => {
                             <h1 class="text-2xl font-bold mb-4">Huéspedes</h1>
                             <Link :href="route('huesped.create')"
                                 class="bg-blue-500 text-white px-4 py-2 rounded mb-4 inline-block">
-                                Alta Huésped
+                            Alta Huésped
                             </Link>
                             <div v-if="$page.props.success" class="bg-green-100 text-green-700 p-4 mb-4 rounded">
                                 {{ $page.props.success }}
@@ -51,13 +79,14 @@ const destroy = (id) => {
                                     <tr v-for="huesped in huespedes" :key="huesped.id">
                                         <td class="border p-2">{{ huesped.tipo_huesped }}</td>
                                         <td class="border p-2">
-                                            {{ huesped.tipo_huesped === 'persona' ? huesped.personas?.nombre + ' ' + huesped.personas?.apellido : huesped.empresas?.razon_social }}
+                                            {{ huesped.tipo_huesped === 'persona' ? huesped.personas?.nombre + ' ' +
+                                                huesped.personas?.apellido : huesped.empresas?.razon_social }}
                                         </td>
                                         <td class="border p-2">{{ huesped.telefono }}</td>
                                         <td class="border p-2">{{ huesped.email }}</td>
                                         <td class="border p-2">
                                             <Link :href="route('huesped.edit', huesped.id)" class="text-blue-500 mr-2">
-                                                Editar
+                                            Editar
                                             </Link>
                                             <button @click="destroy(huesped.id)" class="text-red-500">Eliminar</button>
                                         </td>

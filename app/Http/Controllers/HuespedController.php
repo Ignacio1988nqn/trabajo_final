@@ -84,35 +84,41 @@ class HuespedController extends Controller
 
         try {
             return DB::transaction(function () use ($validated, $huesped) {
-                // Update the huesped record
+                // Actualizar el registro de huesped
                 $huesped->update([
                     'tipo_huesped' => $validated['tipo_huesped'],
                     'telefono' => $validated['telefono'],
                     'email' => $validated['email'],
                 ]);
 
-                // Handle persona or empresa based on tipo_huesped
+                // Manejar persona o empresa según tipo_huesped
                 if ($validated['tipo_huesped'] === 'persona') {
-                    // Delete existing empresa record if it exists
+                    // Eliminar registro de empresa si existe
                     if ($huesped->empresa) {
                         $huesped->empresa->delete();
                     }
-                    // Update or create persona record
-                    $persona = $huesped->persona ?? new Personas(['huesped_id' => $huesped->id]);
-                    $persona->nombre = $validated['nombre'];
-                    $persona->apellido = $validated['apellido'];
-                    $persona->documento = $validated['documento'];
-                    $persona->save();
+                    // Actualizar o crear registro de persona
+                    Personas::updateOrCreate(
+                        ['huesped_id' => $huesped->id], // Condición para buscar
+                        [
+                            'nombre' => $validated['nombre'],
+                            'apellido' => $validated['apellido'],
+                            'documento' => $validated['documento'],
+                        ]
+                    );
                 } elseif ($validated['tipo_huesped'] === 'empresa') {
-                    // Delete existing persona record if it exists
+                    // Eliminar registro de persona si existe
                     if ($huesped->persona) {
                         $huesped->persona->delete();
                     }
-                    // Update or create empresa record
-                    $empresa = $huesped->empresa ?? new Empresas(['huesped_id' => $huesped->id]);
-                    $empresa->razon_social = $validated['razon_social'];
-                    $empresa->cuit = $validated['cuit'];
-                    $empresa->save();
+                    // Actualizar o crear registro de empresa
+                    Empresas::updateOrCreate(
+                        ['huesped_id' => $huesped->id], // Condición para buscar
+                        [
+                            'razon_social' => $validated['razon_social'],
+                            'cuit' => $validated['cuit'],
+                        ]
+                    );
                 }
 
                 return redirect()->route('huesped.index')->with('success', 'Huésped actualizado con éxito.');
@@ -121,26 +127,23 @@ class HuespedController extends Controller
             return redirect()->back()->withErrors(['error' => 'Error al actualizar el huésped: ' . $e->getMessage()]);
         }
     }
-
     public function edit($id)
     {
         $huesped = Huespedes::with(['personas', 'empresas'])->findOrFail($id);
-        $huesped = [
+
+        return Inertia::render('Huespedes/Edit', [
             'huesped' => [
                 'id' => $huesped->id,
                 'tipo_huesped' => $huesped->tipo_huesped,
                 'telefono' => $huesped->telefono,
                 'email' => $huesped->email,
-                'nombre' => $huesped->persona ? $huesped->persona->nombre : null,
-                'apellido' => $huesped->persona ? $huesped->persona->apellido : null,
-                'documento' => $huesped->persona ? $huesped->persona->documento : null,
-                'razon_social' => $huesped->empresa ? $huesped->empresa->razon_social : null,
-                'cuit' => $huesped->empresa ? $huesped->empresa->cuit : null,
+                'nombre' => $huesped->personas ? $huesped->personas->nombre : null,
+                'apellido' => $huesped->personas ? $huesped->personas->apellido : null,
+                'documento' => $huesped->personas ? $huesped->personas->documento : null,
+                'razon_social' => $huesped->empresas ? $huesped->empresas->razon_social : null,
+                'cuit' => $huesped->empresas ? $huesped->empresas->cuit : null,
             ],
-        ];
-
-        return Inertia::render('Huespedes/Edit', $huesped);
-
+        ]);
     }
 
     public function destroy($id)
