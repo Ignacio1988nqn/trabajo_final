@@ -47,7 +47,7 @@ class CheckoutController extends Controller
 
         $reserva->update([
             'estado' => 'checkout',
-            'fecha_checkout' => Carbon::now(), // Guarda fecha y hora completas
+            // 'fecha_checkout' => Carbon::now(), // Guarda fecha y hora completas
         ]);
 
         return redirect()->route('checkout.index')->with('success', 'Check-out realizado con éxito.');

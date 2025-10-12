@@ -10,6 +10,8 @@ use App\Http\Controllers\ReservaController;
 use App\Http\Controllers\CheckinController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\GastosController;
+use App\Http\Controllers\HabitacionController;
+use App\Http\Controllers\DisponibilidadController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -66,5 +68,11 @@ Route::get('/reservas/{reserva}/gastos/create', [GastosController::class, 'creat
 Route::get('/gastos', [GastosController::class, 'index'])->name('gastos.index');
 Route::get('/gastos/{reserva}', [GastosController::class, 'show'])->name('gastos.show');
 Route::post('/gastos', [GastosController::class, 'store'])->name('gastos.store');
+
+Route::put('/habitaciones/{id}/estado', [HabitacionController::class, 'actualizarEstado'])->name('habitaciones.actualizarEstado');
+Route::get('/habitaciones', [HabitacionController::class, 'index'])->name('habitaciones.index');
+
+Route::get('/disponibilidad', [DisponibilidadController::class, 'index'])->name('disponibilidad.index');
+
 
 require __DIR__ . '/auth.php';

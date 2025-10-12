@@ -49,7 +49,7 @@ class CheckinController extends Controller
         // Actualizar estado a checkin y asignar fecha actual
         $reserva->update([
             'estado' => 'checkin',
-            'fecha_checkin' => Carbon::now(),
+            // 'fecha_checkin' => Carbon::now(),
         ]);
 
         return redirect()->route('checkin.index')->with('success', 'Check-in realizado con éxito.');
