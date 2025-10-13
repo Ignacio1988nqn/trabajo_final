@@ -125,7 +125,7 @@ const updateTipoHuesped = (value) => {
                                 <div class="mb-4">
                                     <label for="documento"
                                         class="block text-sm font-medium text-gray-700">Documento</label>
-                                    <input v-model="form.documento" type="number" id="documento"
+                                    <input v-model="form.documento" type="text" id="documento"
                                         class="mt-1 block w-full border-gray-300 rounded-md" />
                                     <span v-if="form.errors.documento" class="text-red-500 text-sm">{{
                                         form.errors.documento
