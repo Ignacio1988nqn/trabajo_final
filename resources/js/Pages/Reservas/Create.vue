@@ -24,7 +24,7 @@ const form = useForm({
   habitacion_id: '',
   fecha_checkin: '',
   fecha_checkout: '',
-  estado: 'reservada',
+  estado: 'pendiente',
   observaciones: ''
 })
 
@@ -101,7 +101,7 @@ function submit() {
                 <div>
                   <label class="block text-sm font-medium mb-1">Estado</label>
                   <select v-model="form.estado" class="border rounded w-full p-2">
-                    <option value="reservada">Reservada</option>
+                    <option value="pendiente">Pendiente</option>
                     <option value="checkin">Check-in</option>
                     <option value="checkout">Check-out</option>
                     <option value="cancelada">Cancelada</option>

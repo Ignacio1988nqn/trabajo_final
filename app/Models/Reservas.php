@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Huespedes;
+use App\Models\Habitaciones;
 use App\Models\User;
 use App\Models\Asignaciones_habitacion;
 use App\Models\Gastos;
@@ -25,7 +26,10 @@ class Reservas extends Model
     {
         return $this->belongsTo(Huespedes::class, 'huesped_id');
     }
-
+    public function habitacion()
+    {
+        return $this->belongsTo(Habitaciones::class);
+    }
     public function usuario()
     {
         return $this->belongsTo(User::class, 'id');

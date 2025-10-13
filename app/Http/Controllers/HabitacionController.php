@@ -8,6 +8,23 @@ use Inertia\Inertia;
 
 class HabitacionController extends Controller
 {
+    public function create()
+    {
+        return Inertia::render('Habitaciones/Create');
+    }
+    public function store(Request $r)
+    {
+        $data = $r->validate([
+            'numero'         => 'required|integer|min:1|unique:habitaciones,numero',
+            'tipo'           => 'required|string|max:100',
+            'precio_noche'   => 'required|numeric|min:0',
+            'estado_actual'  => 'required|string|in:disponible,reservada,mantenimiento',
+            'ultima_limpieza' => 'nullable|date',
+        ]);
+        Habitaciones::create($data);
+        return redirect()->route('habitaciones.index')->with('success', 'Habitación creada');
+    }
+
     public function index(Request $request)
     {
 
@@ -27,6 +44,7 @@ class HabitacionController extends Controller
         $habitaciones = $habitaciones->get();
 
         return Inertia::render('Habitaciones/Index', [
+            'habitaciones' => Habitaciones::orderBy('numero')->get(),
             'habitaciones' => $habitaciones,
             'filtroEstado' => $estado,
             'filtroTipo' => $tipo,
@@ -34,16 +52,16 @@ class HabitacionController extends Controller
     }
 
     public function actualizarEstado(Request $request, $id)
-{
-    $habitacion = Habitaciones::findOrFail($id);
+    {
+        $habitacion = Habitaciones::findOrFail($id);
 
-    $request->validate([
-        'estado_actual' => 'required|string|in:disponible,ocupada,mantenimiento,limpieza',
-    ]);
+        $request->validate([
+            'estado_actual' => 'required|string|in:disponible,ocupada,mantenimiento,limpieza',
+        ]);
 
-    $habitacion->estado_actual = $request->estado_actual;
-    $habitacion->save();
+        $habitacion->estado_actual = $request->estado_actual;
+        $habitacion->save();
 
-    return redirect()->back()->with('success', 'Estado actualizado correctamente.');
-}
+        return redirect()->back()->with('success', 'Estado actualizado correctamente.');
+    }
 }

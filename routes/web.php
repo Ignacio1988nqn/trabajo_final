@@ -56,6 +56,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // (opcionales)
     Route::get('/reservas/disponibles', [ReservaController::class, 'disponibles'])->name('reservas.disponibles');
     Route::get('/huespedes/buscar',     [ReservaController::class, 'buscarHuespedes'])->name('huespedes.buscar');
+
+    //A VER SI ES ESTO
+    Route::resource('habitaciones', HabitacionController::class)->only(['index', 'create', 'store']);
+    Route::resource('reservas', ReservaController::class)->only(['index', 'create', 'store']);
 });
 
 Route::get('/checkin', [CheckinController::class, 'index'])->name('checkin.index');

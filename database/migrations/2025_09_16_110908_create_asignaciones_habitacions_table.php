@@ -6,26 +6,23 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('asignaciones_habitacions', function (Blueprint $table) {
+        // NOMBRE CORRECTO DE LA TABLA
+        Schema::create('asignaciones_habitacion', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('reserva_id')->constrained('reservas')->onDelete('cascade');
-            $table->foreignId('habitacion_id')->constrained('habitaciones')->onDelete('cascade');
+            $table->foreignId('reserva_id')->constrained('reservas')->cascadeOnDelete();
+            $table->foreignId('habitacion_id')->constrained('habitaciones')->cascadeOnDelete();
             $table->date('fecha_inicio');
             $table->date('fecha_fin')->nullable();
             $table->string('motivo_cambio', 255)->nullable();
+            // $table->timestamps(); // si querés auditoría
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('asignaciones_habitacions');
+        // NOMBRE CORRECTO EN EL DROP
+        Schema::dropIfExists('asignaciones_habitacion');
     }
 };

@@ -48,7 +48,7 @@ class ReservaController extends Controller
             'habitacion_id'  => ['required', 'exists:habitaciones,id'],
             'fecha_checkin'  => ['required', 'date', 'before:fecha_checkout'],
             'fecha_checkout' => ['required', 'date', 'after:fecha_checkin'],
-            'estado'         => ['nullable', 'in:reservada,checkin,checkout,cancelada'],
+            'estado'         => ['nullable', 'in:pendiente,checkin,checkout,cancelada'],
         ], [
             'huesped_id.required'     => 'Seleccioná un huésped.',
             'habitacion_id.required'  => 'Seleccioná una habitación.',
@@ -139,7 +139,7 @@ class ReservaController extends Controller
 
     public function index()
     {
-        $reservas = \DB::table('reservas')
+        $reservas = DB::table('reservas')
             ->leftJoin('huespedes', 'huespedes.id', '=', 'reservas.huesped_id')
             ->leftJoin('personas', 'personas.huesped_id', '=', 'huespedes.id')
             ->orderByDesc('reservas.id')
@@ -148,7 +148,7 @@ class ReservaController extends Controller
                 'reservas.fecha_checkin',
                 'reservas.fecha_checkout',
                 'reservas.estado',
-                \DB::raw("TRIM(CONCAT(COALESCE(personas.apellido,''), ' ', COALESCE(personas.nombre,''))) AS huesped_nombre"),
+                DB::raw("TRIM(CONCAT(COALESCE(personas.apellido,''), ' ', COALESCE(personas.nombre,''))) AS huesped_nombre"),
             ]);
 
         return inertia('Reservas/Index', ['reservas' => $reservas]);
