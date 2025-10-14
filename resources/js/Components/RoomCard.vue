@@ -75,9 +75,9 @@ export default {
         case 'ocupada':
           return 'bg-red-100 border-red-500';
         case 'mantenimiento':
-          return 'bg-yellow-100 border-yellow-500';
-        case 'limpieza':
           return 'bg-blue-100 border-blue-500';
+        case 'limpieza':
+          return 'bg-yellow-100 border-yellow-500';
         default:
           return 'bg-gray-100 border-gray-400';
       }

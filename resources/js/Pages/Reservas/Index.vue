@@ -1,6 +1,10 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+
+const props = defineProps({
+  reservas: { type: Array, default: () => [] }
+})
 </script>
 
 <template>
@@ -33,7 +37,30 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
                     <th class="px-4 py-2 text-left">Estado</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100">
+
+                <tbody v-if="props.reservas.length" class="divide-y divide-gray-100">
+                  <tr v-for="r in props.reservas" :key="r.id">
+                    <td class="px-4 py-2">{{ r.id }}</td>
+                    <td class="px-4 py-2">{{ r.huesped_nombre }}</td>
+                    <td class="px-4 py-2">{{ r.fecha_checkin }}</td>
+                    <td class="px-4 py-2">{{ r.fecha_checkout }}</td>
+                     <td class="px-4 py-2">
+               <span
+                 class="px-3 py-1 rounded-full text-sm font-medium capitalize"
+                 :class="{
+                   'text-yellow-800 bg-yellow-100': r.estado === 'pendiente',
+                   'text-green-800 bg-green-100': r.estado === 'checkin',
+                   'text-blue-800 bg-blue-100': r.estado === 'checkout',
+                   'text-red-800 bg-red-100': r.estado === 'cancelada'
+                 }"
+               >
+                     {{ r.estado }}
+                   </span>
+                 </td>              
+               </tr>
+                </tbody>
+
+                <tbody v-else>
                   <tr>
                     <td class="px-4 py-2 text-gray-500" colspan="5">Sin reservas aún.</td>
                   </tr>

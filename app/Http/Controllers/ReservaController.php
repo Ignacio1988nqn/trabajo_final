@@ -11,12 +11,11 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
-
 class ReservaController extends Controller
 {
     public function create()
     {
-        // Huespedes + datos de personas (incluye documento)
+        // Huespedes + datos de personas (para mostrar DNI en el <select>)
         $huespedes = Huespedes::leftJoin('personas', 'personas.huesped_id', '=', 'huespedes.id')
             ->orderBy('personas.apellido')
             ->orderBy('personas.nombre')
@@ -26,8 +25,7 @@ class ReservaController extends Controller
                 'huespedes.telefono',
                 'personas.nombre',
                 'personas.apellido',
-                'personas.documento', // <- acá va el documento
-                // Un campo “display” listo para mostrar en el <select>
+                'personas.documento',
                 DB::raw("TRIM(CONCAT(COALESCE(personas.apellido,''), ', ', COALESCE(personas.nombre,''), ' (DNI: ', COALESCE(personas.documento,''), ')')) AS display"),
             ]);
 
@@ -56,11 +54,12 @@ class ReservaController extends Controller
             'fecha_checkout.after'    => 'El check-out debe ser posterior al check-in.',
         ]);
 
-        // Disponibilidad: se solapa si (nuevo_in < ex_fin) y (nuevo_fin > ex_inicio)
+        // Disponibilidad: hay conflicto si (nuevo_inicio < existente_fin/null∞) y (nuevo_fin > existente_inicio)
         $conflicto = Asignaciones_habitacion::where('habitacion_id', $request->habitacion_id)
+            ->where('fecha_inicio', '<', $request->fecha_checkout)
             ->where(function ($q) use ($request) {
-                $q->where('fecha_inicio', '<', $request->fecha_checkout)
-                    ->where('fecha_fin',    '>', $request->fecha_checkin);
+                $q->whereNull('fecha_fin')
+                    ->orWhere('fecha_fin', '>', $request->fecha_checkin);
             })
             ->exists();
 
@@ -71,28 +70,31 @@ class ReservaController extends Controller
         }
 
         DB::transaction(function () use ($request) {
+            // 1) Crear la reserva (por defecto en 'pendiente')
             $reserva = Reservas::create([
                 'huesped_id'     => $request->huesped_id,
                 'fecha_checkin'  => $request->fecha_checkin,
                 'fecha_checkout' => $request->fecha_checkout,
-                'estado'         => $request->estado ?? 'checkin', // o 'reservada'
+                'estado'         => $request->estado ?? 'pendiente',
                 'usuario_id'     => Auth::id(),
-                // 'fecha_reserva' => now(), // si tenés ese campo y no usás timestamps
+                'fecha_reserva'  => now(), // si tenés esta columna en la tabla
+                // NOTA: no guardamos habitacion_id en reservas si tu esquema no lo tiene
             ]);
 
+            // 2) Crear la asignación inicial VIGENTE (fecha_fin = NULL)
             Asignaciones_habitacion::create([
                 'reserva_id'    => $reserva->id,
                 'habitacion_id' => $request->habitacion_id,
                 'fecha_inicio'  => $request->fecha_checkin,
-                'fecha_fin'     => $request->fecha_checkout,
-                'motivo_cambio' => null,
+                'fecha_fin'     => null, // se cerrará en el checkout
+                'motivo_cambio' => 'Asignación inicial',
             ]);
         });
 
-        return redirect()->route('reservas.index')->with('success', 'Check-in/Reserva registrada.');
+        return redirect()->route('reservas.index')->with('success', 'Reserva registrada.');
     }
 
-    // Opcional: endpoint para listar habitaciones disponibles según rango
+    // Endpoint para listar habitaciones disponibles según rango
     public function disponibles(Request $request)
     {
         $request->validate([
@@ -101,9 +103,10 @@ class ReservaController extends Controller
         ]);
 
         $ocupadas = Asignaciones_habitacion::select('habitacion_id')
+            ->where('fecha_inicio', '<', $request->check_out)
             ->where(function ($q) use ($request) {
-                $q->where('fecha_inicio', '<', $request->check_out)
-                    ->where('fecha_fin',    '>', $request->check_in);
+                $q->whereNull('fecha_fin')
+                    ->orWhere('fecha_fin', '>', $request->check_in);
             });
 
         $habitaciones = Habitaciones::whereNotIn('id', $ocupadas)
@@ -137,11 +140,32 @@ class ReservaController extends Controller
         return response()->json($q->orderBy('personas.apellido')->limit(20)->get());
     }
 
+    public function terminarLimpieza(Habitaciones $habitacion)
+    {
+        $habitacion->update(['estado_actual' => 'disponible']);
+        return back()->with('success', 'Limpieza finalizada. Habitación disponible.');
+    }
+
+
     public function index()
     {
+        // Subquery: última asignación por reserva (MAX(fecha_inicio))
+        $ultimaAsignacion = DB::table('asignaciones_habitacion')
+            ->select('reserva_id', DB::raw('MAX(fecha_inicio) AS fi'))
+            ->groupBy('reserva_id');
+
+        // Join a la asignación concreta y a habitaciones para traer numero/tipo
         $reservas = DB::table('reservas')
             ->leftJoin('huespedes', 'huespedes.id', '=', 'reservas.huesped_id')
             ->leftJoin('personas', 'personas.huesped_id', '=', 'huespedes.id')
+            ->leftJoinSub($ultimaAsignacion, 'ua', function ($join) {
+                $join->on('ua.reserva_id', '=', 'reservas.id');
+            })
+            ->leftJoin('asignaciones_habitacion as ah', function ($join) {
+                $join->on('ah.reserva_id', '=', 'ua.reserva_id')
+                    ->on('ah.fecha_inicio', '=', 'ua.fi');
+            })
+            ->leftJoin('habitaciones as h', 'h.id', '=', 'ah.habitacion_id')
             ->orderByDesc('reservas.id')
             ->get([
                 'reservas.id',
@@ -149,6 +173,8 @@ class ReservaController extends Controller
                 'reservas.fecha_checkout',
                 'reservas.estado',
                 DB::raw("TRIM(CONCAT(COALESCE(personas.apellido,''), ' ', COALESCE(personas.nombre,''))) AS huesped_nombre"),
+                'h.numero as habitacion_numero',
+                'h.tipo   as habitacion_tipo',
             ]);
 
         return inertia('Reservas/Index', ['reservas' => $reservas]);

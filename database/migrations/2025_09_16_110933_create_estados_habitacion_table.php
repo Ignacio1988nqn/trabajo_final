@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('estados_habitacions', function (Blueprint $table) {
+        Schema::create('estados_habitacion', function (Blueprint $table) {
             $table->id();
             $table->foreignId('habitacion_id')->constrained('habitaciones')->onDelete('cascade');
             $table->enum('tipo_estado', ['disponible', 'ocupada', 'mantenimiento', 'limpieza']);
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('estados_habitacions');
+        Schema::dropIfExists('estados_habitacion');
     }
 };

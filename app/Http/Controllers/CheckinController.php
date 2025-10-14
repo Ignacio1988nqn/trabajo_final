@@ -3,55 +3,95 @@
 namespace App\Http\Controllers;
 
 use App\Models\Reservas;
+use App\Models\Habitaciones;
+use App\Models\Asignaciones_habitacion;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
-use Carbon\Carbon;
 
 class CheckinController extends Controller
 {
     public function index()
     {
-        // Obtener reservas pendientes con datos del huésped
-        $reservas = Reservas::with('huesped')
+        // Cargar huésped + asignación vigente + habitación
+        $reservas = Reservas::with([
+            'huesped.personas',
+            'huesped.empresas',
+            'asignacionVigente.habitacion',
+        ])
             ->where('estado', 'pendiente')
             ->get()
-            ->map(function ($reserva) {
+            ->map(function ($r) {
+                // nombre a mostrar
                 $huespedNombre = 'Huésped no encontrado';
-                if ($reserva->huesped) {
-                    if ($reserva->huesped->personas) {
-                        $huespedNombre = $reserva->huesped->personas->nombre . ' ' . $reserva->huesped->personas->apellido;
-                    } elseif ($reserva->huesped->empresas) {
-                        $huespedNombre = $reserva->huesped->empresas->razon_social ?? 'Sin nombre';
+                if ($r->huesped) {
+                    if ($r->huesped->personas) {
+                        $huespedNombre = $r->huesped->personas->nombre . ' ' . $r->huesped->personas->apellido;
+                    } elseif ($r->huesped->empresas) {
+                        $huespedNombre = $r->huesped->empresas->razon_social ?? 'Sin nombre';
                     }
                 }
+
                 return [
-                    'id' => $reserva->id,
-                    'huesped' => $huespedNombre,
-                    'fecha_reserva' => $reserva->fecha_reserva->format('d/m/Y H:i'),
-                    'fecha_checkin' => $reserva->fecha_checkin ? $reserva->fecha_checkin->format('d/m/Y') : 'No asignada',
-                    'fecha_checkout' => $reserva->fecha_checkout ? $reserva->fecha_checkout->format('d/m/Y') : 'No asignada',
-                    'estado' => $reserva->estado,
+                    'id'              => $r->id,
+                    'huesped'         => $huespedNombre,
+                    'fecha_reserva'   => optional($r->fecha_reserva)->format('d/m/Y H:i'),
+                    'fecha_checkin'   => optional($r->fecha_checkin)->format('d/m/Y') ?: 'No asignada',
+                    'fecha_checkout'  => optional($r->fecha_checkout)->format('d/m/Y') ?: 'No asignada',
+                    'estado'          => $r->estado,
+                    // útil para la vista: saber si ya tiene asignación
+                    'habitacion'      => optional(optional($r->asignacionVigente)->habitacion)->numero,
                 ];
             });
-        // dd($reservas);
-        return Inertia::render('Reservas/Checkin', [
-            'reservas' => $reservas,
-        ]);
+
+        return Inertia::render('Reservas/Checkin', compact('reservas'));
     }
 
     public function checkin(Request $request, Reservas $reserva)
     {
-        // Validar que la reserva esté en estado pendiente
+        // 1) Debe estar pendiente
         if ($reserva->estado !== 'pendiente') {
             return back()->withErrors(['error' => 'La reserva no está en estado pendiente.']);
         }
 
-        // Actualizar estado a checkin y asignar fecha actual
-        $reserva->update([
-            'estado' => 'checkin',
-            // 'fecha_checkin' => Carbon::now(),
-        ]);
+        // 2) Debe existir una ASIGNACIÓN vigente (no mirar habitacion_id en reservas)
+        $asignacion = $reserva->asignaciones()
+            ->whereNull('fecha_fin')          // vigente
+            ->latest('fecha_inicio')
+            ->with('habitacion')
+            ->first();
 
-        return redirect()->route('checkin.index')->with('success', 'Check-in realizado con éxito.');
+        if (!$asignacion) {
+            return back()->withErrors(['error' => 'La reserva no tiene una habitación asignada.']);
+            // o redirigir a ruta para asignar: return redirect()->route('reservas.asignar', $reserva->id);
+        }
+
+        // 3) Opcional: verificar estado de la habitación
+        if ($asignacion->habitacion && $asignacion->habitacion->estado_actual !== 'disponible') {
+            return back()->withErrors(['error' => 'La habitación asignada no está disponible.']);
+        }
+
+        // 4) Transacción de check-in
+        DB::transaction(function () use ($reserva, $asignacion) {
+            // marcar habitación ocupada
+            Habitaciones::where('id', $asignacion->habitacion_id)
+                ->update(['estado_actual' => 'ocupada']);
+
+            // actualizar reserva
+            $reserva->update([
+                'estado'        => 'checkin',              // o 'en_estadia'
+                'fecha_checkin' => now()->toDateString(),  // registra momento real
+            ]);
+
+            // si querés, registrar motivo en la asignación vigente
+            if (empty($asignacion->motivo_cambio)) {
+                $asignacion->motivo_cambio = 'Check-in';
+                $asignacion->save();
+            }
+        });
+
+        return redirect()
+            ->route('checkin.index')
+            ->with('success', 'Check-in realizado y habitación marcada como ocupada.');
     }
 }

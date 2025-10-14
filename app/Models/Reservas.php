@@ -26,10 +26,15 @@ class Reservas extends Model
     {
         return $this->belongsTo(Huespedes::class, 'huesped_id');
     }
+    // public function habitacion()
+    // {
+    //     return $this->belongsTo(Habitaciones::class);
+    // }
     public function habitacion()
     {
-        return $this->belongsTo(Habitaciones::class);
+        return $this->belongsTo(Habitaciones::class, 'habitacion_id');
     }
+
     public function usuario()
     {
         return $this->belongsTo(User::class, 'id');
@@ -38,6 +43,15 @@ class Reservas extends Model
     public function asignaciones()
     {
         return $this->hasMany(Asignaciones_habitacion::class, 'reserva_id');
+    }
+    // Asignación "vigente": sin fecha_fin (o la última por fecha_inicio)
+    public function asignacionVigente()
+    {
+        return $this->hasOne(Asignaciones_habitacion::class, 'reserva_id')
+            ->whereNull('fecha_fin')
+            ->latest('fecha_inicio');
+        // alternativa si siempre cerrás con fecha_fin:
+        // ->whereDate('fecha_inicio', '<=', now())->whereDate('fecha_fin', '>=', now());
     }
 
     public function gastos()
