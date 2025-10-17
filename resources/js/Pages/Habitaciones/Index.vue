@@ -15,6 +15,15 @@
                     <div class="p-6 text-gray-900">
                         <div class="flex flex-wrap gap-6 mb-6">
                             <div>
+                                <label for="numeroFiltro" class="block text-sm font-medium text-gray-700">
+                                    Buscar por número:
+                                </label>
+                                <input id="numeroFiltro" v-model="numeroSeleccionado" @input="aplicarFiltros"
+                                    type="text"
+                                    class="mt-1 block w-48 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                    placeholder="Ej. 101" />
+                            </div>
+                            <div>
                                 <label for="estadoFiltro" class="block text-sm font-medium text-gray-700">
                                     Filtrar por estado:
                                 </label>
@@ -27,7 +36,6 @@
                                     <option value="limpieza">Limpieza</option>
                                 </select>
                             </div>
-
                             <div>
                                 <label for="tipoFiltro" class="block text-sm font-medium text-gray-700">
                                     Filtrar por tipo:
@@ -41,10 +49,12 @@
                                     <option value="cuadruple">Cuádruple</option>
                                 </select>
                             </div>
-                        </div>                  
+                        </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <RoomCard v-for="habitacion in habitaciones" :key="habitacion.id" :room="habitacion" />
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" style="padding-bottom: 80px;">
+                            <RoomCard v-for="habitacion in habitaciones" :key="habitacion.id" :room="habitacion"
+                                :asignacion-vigente="habitacion.asignacion_vigente"
+                                :habitaciones-disponibles="habitacionesDisponibles" />
                         </div>
                     </div>
                 </div>
@@ -70,6 +80,10 @@ export default {
             type: Array,
             required: true,
         },
+        habitacionesDisponibles: {
+            type: Array,
+            default: () => [], // Hacerla opcional
+        },
         filtroEstado: {
             type: String,
             default: 'todos',
@@ -78,24 +92,25 @@ export default {
             type: String,
             default: 'todos',
         },
+        filtroNumero: {
+            type: [String, null],
+            default: null,
+        },
     },
     data() {
         return {
             estadoSeleccionado: this.filtroEstado,
             tipoSeleccionado: this.filtroTipo,
+            numeroSeleccionado: this.filtroNumero,
         };
     },
     methods: {
         actualizarFiltro(event) {
             this.estadoSeleccionado = event.target.value;
-            this.$emit('update:filtroEstado', this.estadoSeleccionado);
-
             this.aplicarFiltros();
         },
         actualizarFiltroTipo(event) {
             this.tipoSeleccionado = event.target.value;
-            this.$emit('update:filtroTipo', this.tipoSeleccionado);
-
             this.aplicarFiltros();
         },
         aplicarFiltros() {
@@ -104,10 +119,14 @@ export default {
                 {
                     estado: this.estadoSeleccionado,
                     tipo: this.tipoSeleccionado,
+                    numero: this.numeroSeleccionado || null,
                 },
                 { preserveState: true, preserveScroll: true }
             );
         },
+    },
+    mounted() {
+        console.log('Habitaciones disponibles desde Index:', this.habitacionesDisponibles);
     },
 };
 </script>

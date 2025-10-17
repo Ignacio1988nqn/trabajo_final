@@ -46,11 +46,16 @@ const showingNavigationDropdown = ref(false);
                                 <NavLink :href="route('gastos.index')" class="text-gray-700 hover:text-blue-500">
                                     Consultar Gastos
                                 </NavLink>
-                                  <NavLink :href="route('habitaciones.index')" class="text-gray-700 hover:text-blue-500">
+                                <NavLink :href="route('habitaciones.index')" class="text-gray-700 hover:text-blue-500">
                                     Estado de Habitaciones
                                 </NavLink>
-                                 <NavLink :href="route('disponibilidad.index')" class="text-gray-700 hover:text-blue-500">
+                                <NavLink :href="route('disponibilidad.index')"
+                                    class="text-gray-700 hover:text-blue-500">
                                     Ver Disponibilidad
+                                </NavLink>
+                                <NavLink :href="route('gasto-items.index')"
+                                    class="text-gray-700 hover:text-blue-500">
+                                    Alta Articulos
                                 </NavLink>
                             </div>
                         </div>

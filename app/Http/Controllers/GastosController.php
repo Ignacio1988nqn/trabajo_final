@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Reservas;
 use App\Models\Gastos;
+use App\Models\GastoItems;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -20,7 +21,7 @@ class GastosController extends Controller
                             ? ($reserva->huesped->personas ? $reserva->huesped->personas->nombre . ' ' . $reserva->huesped->personas->apellido : 'Sin nombre')
                             : ($reserva->huesped->empresas ? $reserva->huesped->empresas->razon_social : 'Sin razón social'))
                         : 'Huésped no encontrado',
-                    'fecha_inicio' => $reserva->fecha_checkin, // Usar fecha_checkin
+                    'fecha_inicio' => $reserva->fecha_checkin,
                     'estado' => $reserva->estado,
                 ];
             }),
@@ -29,23 +30,25 @@ class GastosController extends Controller
 
     public function show(Reservas $reserva)
     {
+        $reserva->load(['gastos.item']);
+
         return Inertia::render('Gastos/GastosShow', [
             'reserva' => [
                 'id' => $reserva->id,
                 'estado' => $reserva->estado,
             ],
-            'gastos' => $reserva->gastos()->get()->map(function ($gasto) {
+            'gastos' => $reserva->gastos->map(function ($gasto) {
                 return [
                     'id' => $gasto->id,
-                    'descripcion' => $gasto->descripcion,
-                    'monto' => $gasto->monto,
+                    'descripcion' => $gasto->item?->nombre ?? 'Sin descripción',
+                    'monto' => $gasto->monto ?? 0,
                     'fecha' => $gasto->fecha,
-                    'tipo' => $gasto->tipo,
+                    'tipo' => $gasto->item?->tipo ?? 'Sin tipo',
                 ];
             }),
-            'tiposGasto' => ['Consumo', 'Servicio', 'Daños', 'Otros'], // Ajusta según tu lógica
         ]);
     }
+
     public function create($reserva_id)
     {
         $reserva = Reservas::with('huesped')->findOrFail($reserva_id);
@@ -53,9 +56,13 @@ class GastosController extends Controller
             return redirect()->back()->with('error', 'No se pueden cargar gastos a una reserva en estado ' . $reserva->estado);
         }
 
+        $items = GastoItems::orderBy('nombre')->get(['id', 'nombre', 'precio', 'tipo']);
+        $tipos = GastoItems::select('tipo')->distinct()->pluck('tipo');
+
         return Inertia::render('Gastos/Create', [
             'reserva' => $reserva,
-            'tiposGasto' => ['habitacion', 'servicios', 'minibar', 'confiteria'],
+            'items' => $items,
+            'tipos' => $tipos,
         ]);
     }
 
@@ -63,14 +70,21 @@ class GastosController extends Controller
     {
         $validated = $request->validate([
             'reserva_id' => 'required|exists:reservas,id',
-            'descripcion' => 'required|string|max:255',
-            'monto' => 'required|numeric|min:0',
+            'gasto_item_id' => 'required|exists:gasto_items,id',
             'fecha' => 'required|date',
-            'tipo' => 'required|in:habitacion,servicios,minibar,confiteria',
         ]);
 
-        Gastos::create($validated);
+        $item = \App\Models\GastoItems::findOrFail($validated['gasto_item_id']);
 
-        return redirect()->route('gastos.show', $request->reserva_id);
+        Gastos::create([
+            'reserva_id'    => $validated['reserva_id'],
+            'gasto_item_id' => $validated['gasto_item_id'],
+            'fecha'         => $validated['fecha'],
+            'monto'         => $item->precio,
+        ]);
+
+        return redirect()
+            ->route('gastos.show', $validated['reserva_id'])
+            ->with('success', 'Gasto agregado correctamente.');
     }
 }
