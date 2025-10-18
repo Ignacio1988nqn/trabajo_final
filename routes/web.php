@@ -12,6 +12,9 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\GastosController;
 use App\Http\Controllers\HabitacionController;
 use App\Http\Controllers\DisponibilidadController;
+use App\Http\Controllers\GastoItemsController;
+use App\Http\Controllers\LimpiezaController;
+
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -62,21 +65,37 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('reservas', ReservaController::class)->only(['index', 'create', 'store']);
 });
 
-Route::get('/checkin', [CheckinController::class, 'index'])->name('checkin.index');
-Route::post('/checkin/{reserva}', [CheckinController::class, 'checkin'])->name('checkin.store');
+Route::get('/checkin', [CheckinController::class, 'index'])->middleware(['auth', 'verified'])->name('checkin.index');
+Route::post('/checkin/{reserva}', [CheckinController::class, 'checkin'])->middleware(['auth', 'verified'])->name('checkin.store');
 
-Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
-Route::post('/checkout/{reserva}', [CheckoutController::class, 'checkout'])->name('checkout.store');
+Route::get('/checkout', [CheckoutController::class, 'index'])->middleware(['auth', 'verified'])->name('checkout.index');
+Route::post('/checkout/{reserva}', [CheckoutController::class, 'checkout'])->middleware(['auth', 'verified'])->name('checkout.store');
 
-Route::get('/reservas/{reserva}/gastos/create', [GastosController::class, 'create'])->name('gastos.create');
-Route::get('/gastos', [GastosController::class, 'index'])->name('gastos.index');
-Route::get('/gastos/{reserva}', [GastosController::class, 'show'])->name('gastos.show');
-Route::post('/gastos', [GastosController::class, 'store'])->name('gastos.store');
+Route::get('/reservas/{reserva}/gastos/create', [GastosController::class, 'create'])->middleware(['auth', 'verified'])->name('gastos.create');
+Route::get('/gastos', [GastosController::class, 'index'])->middleware(['auth', 'verified'])->name('gastos.index');
+Route::get('/gastos/{reserva}', [GastosController::class, 'show'])->middleware(['auth', 'verified'])->name('gastos.show');
+Route::post('/gastos', [GastosController::class, 'store'])->middleware(['auth', 'verified'])->name('gastos.store');
 
 Route::put('/habitaciones/{id}/estado', [HabitacionController::class, 'actualizarEstado'])->name('habitaciones.actualizarEstado');
-Route::get('/habitaciones', [HabitacionController::class, 'index'])->name('habitaciones.index');
+Route::get('/habitaciones', [HabitacionController::class, 'index'])->middleware(['auth', 'verified'])->name('habitaciones.index');
 
-Route::get('/disponibilidad', [DisponibilidadController::class, 'index'])->name('disponibilidad.index');
+Route::get('/disponibilidad', [DisponibilidadController::class, 'index'])->middleware(['auth', 'verified'])->name('disponibilidad.index');
 
+// Route::get('/habitaciones', [HabitacionController::class, 'index'])->name('habitaciones.index');
+Route::get('/habitaciones/create', [HabitacionController::class, 'create'])->middleware(['auth', 'verified'])->name('habitaciones.create');
+Route::post('/habitaciones', [HabitacionController::class, 'store'])->middleware(['auth', 'verified'])->name('habitaciones.store');
+Route::post('/habitaciones/{id}/cambiar', [HabitacionController::class, 'cambiarHabitacion'])->middleware(['auth', 'verified'])->name('habitaciones.cambiarHabitacion');
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/gasto-items', [GastoItemsController::class, 'index'])->name('gasto-items.index');
+    Route::get('/gasto-items/create', [GastoItemsController::class, 'create'])->name('gasto-items.create');
+    Route::post('/gasto-items', [GastoItemsController::class, 'store'])->name('gasto-items.store');
+    Route::get('/gasto-items/{gastoItem}/edit', [GastoItemsController::class, 'edit'])->name('gasto-items.edit');
+    Route::put('/gasto-items/{gastoItem}', [GastoItemsController::class, 'update'])->name('gasto-items.update');
+    Route::delete('/gasto-items/{gastoItem}', [GastoItemsController::class, 'destroy'])->name('gasto-items.destroy');
+});
+
+Route::get('/limpieza', [LimpiezaController::class, 'index'])->middleware(['auth', 'verified'])->name('limpieza.index');
+Route::post('/limpieza/{id}/disponible', [LimpiezaController::class, 'marcarDisponible'])->middleware(['auth', 'verified'])->name('limpieza.disponible');
 
 require __DIR__ . '/auth.php';
