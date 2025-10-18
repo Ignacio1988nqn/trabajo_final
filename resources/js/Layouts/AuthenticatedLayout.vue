@@ -57,6 +57,10 @@ const showingNavigationDropdown = ref(false);
                                     class="text-gray-700 hover:text-blue-500">
                                     Alta Articulos
                                 </NavLink>
+                                <NavLink :href="route('limpieza.index')"
+                                    class="text-gray-700 hover:text-blue-500">
+                                    Estado Limpieza
+                                </NavLink>
                             </div>
                         </div>
 
