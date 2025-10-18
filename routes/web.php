@@ -13,6 +13,8 @@ use App\Http\Controllers\GastosController;
 use App\Http\Controllers\HabitacionController;
 use App\Http\Controllers\DisponibilidadController;
 use App\Http\Controllers\GastoItemsController;
+use App\Http\Controllers\LimpiezaController;
+
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -92,5 +94,8 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/gasto-items/{gastoItem}', [GastoItemsController::class, 'update'])->name('gasto-items.update');
     Route::delete('/gasto-items/{gastoItem}', [GastoItemsController::class, 'destroy'])->name('gasto-items.destroy');
 });
+
+Route::get('/limpieza', [LimpiezaController::class, 'index'])->middleware(['auth', 'verified'])->name('limpieza.index');
+Route::post('/limpieza/{id}/disponible', [LimpiezaController::class, 'marcarDisponible'])->middleware(['auth', 'verified'])->name('limpieza.disponible');
 
 require __DIR__ . '/auth.php';
