@@ -11,7 +11,7 @@ use App\Models\Reservas;
 class Huespedes extends Model
 {
     protected $table = 'huespedes';
-    protected $fillable = ['tipo_huesped', 'telefono', 'email','fecha_registro'];
+    protected $fillable = ['tipo_huesped', 'telefono', 'email', 'fecha_registro'];
     public $timestamps = false; // Usamos fecha_registro
 
     // Relaciones

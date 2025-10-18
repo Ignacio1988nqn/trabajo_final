@@ -147,15 +147,16 @@ class ReservaController extends Controller
     }
 
 
+
     public function index()
     {
-        // Subquery: última asignación por reserva (MAX(fecha_inicio))
+        // Subconsulta: última fecha de asignación por reserva
         $ultimaAsignacion = DB::table('asignaciones_habitacion')
             ->select('reserva_id', DB::raw('MAX(fecha_inicio) AS fi'))
             ->groupBy('reserva_id');
 
-        // Join a la asignación concreta y a habitaciones para traer numero/tipo
-        $reservas = DB::table('reservas')
+        // Consulta principal
+        $base = DB::table('reservas')
             ->leftJoin('huespedes', 'huespedes.id', '=', 'reservas.huesped_id')
             ->leftJoin('personas', 'personas.huesped_id', '=', 'huespedes.id')
             ->leftJoinSub($ultimaAsignacion, 'ua', function ($join) {
@@ -167,7 +168,7 @@ class ReservaController extends Controller
             })
             ->leftJoin('habitaciones as h', 'h.id', '=', 'ah.habitacion_id')
             ->orderByDesc('reservas.id')
-            ->get([
+            ->select([
                 'reservas.id',
                 'reservas.fecha_checkin',
                 'reservas.fecha_checkout',
@@ -177,6 +178,11 @@ class ReservaController extends Controller
                 'h.tipo   as habitacion_tipo',
             ]);
 
-        return inertia('Reservas/Index', ['reservas' => $reservas]);
+        // 👉 Resultado
+        $reservas = $base->get();
+
+        return Inertia::render('Reservas/Index', [
+            'reservas' => $reservas,
+        ]);
     }
 }

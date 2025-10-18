@@ -1,3 +1,27 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@layer base {
+  :root {
+    --bg:      theme(colors.surface.light);
+    --card:    theme(colors.surface.card);
+    --border:  theme(colors.surface.border);
+    --text:    theme(colors.ink.DEFAULT);
+    --muted:   theme(colors.ink.mute);
+    --primary: theme(colors.admin.primary);
+    --accent:  theme(colors.admin.accent);
+  }
+  .dark {
+    --bg: #0B1020;
+    --card: #0F172A;
+    --border: #1E293B;
+    --text: #E2E8F0;
+    --muted: #94A3B8;
+    --primary: #60A5FA;
+    --accent: #22D3EE;
+  }
+
+  body {
+    @apply bg-[var(--bg)] text-[var(--text)];
+  }
+}

@@ -26,10 +26,7 @@ class Reservas extends Model
     {
         return $this->belongsTo(Huespedes::class, 'huesped_id');
     }
-    // public function habitacion()
-    // {
-    //     return $this->belongsTo(Habitaciones::class);
-    // }
+
     public function habitacion()
     {
         return $this->belongsTo(Habitaciones::class, 'habitacion_id');
