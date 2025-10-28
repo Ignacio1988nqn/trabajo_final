@@ -29,4 +29,19 @@ class Huespedes extends Model
     {
         return $this->hasMany(Reservas::class, 'huesped_id');
     }
+
+
+    // Etiqueta lista para usar en el <select>
+    public function getDisplayAttribute(): string
+    {
+        if ($this->tipo_huesped === 'persona' && $this->persona) {
+            $p = $this->persona;
+            return trim("{$p->apellido}, {$p->nombre} (DNI: {$p->documento})");
+        }
+        if ($this->tipo_huesped === 'empresa' && $this->empresa) {
+            $e = $this->empresa;
+            return "{$e->razon_social} (CUIT: {$e->cuit})";
+        }
+        return "Huésped #{$this->id}";
+    }
 }

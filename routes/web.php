@@ -39,7 +39,8 @@ Route::get('/counter', function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('huesped', HuespedController::class);
 });
-
+Route::get('/reservas/buscarhuespedes', [ReservaController::class, 'buscarHuespedes'])
+    ->name('reservas.buscarHuespedes');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // Listado
@@ -67,7 +68,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::get('/checkin', [CheckinController::class, 'index'])->middleware(['auth', 'verified'])->name('checkin.index');
 Route::post('/checkin/{reserva}', [CheckinController::class, 'checkin'])->middleware(['auth', 'verified'])->name('checkin.store');
+Route::get('/checkin', [CheckinController::class, 'index'])->name('checkin.index');
 
+Route::post('/checkin/{reserva}', [CheckinController::class, 'checkin'])->name('checkin.do');
 Route::get('/checkout', [CheckoutController::class, 'index'])->middleware(['auth', 'verified'])->name('checkout.index');
 Route::post('/checkout/{reserva}', [CheckoutController::class, 'checkout'])->middleware(['auth', 'verified'])->name('checkout.store');
 

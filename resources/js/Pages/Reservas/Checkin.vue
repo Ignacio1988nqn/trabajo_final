@@ -1,11 +1,45 @@
 <script setup>
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import { Head, Link, router } from '@inertiajs/vue3'
+
+const props = defineProps({
+  reservas: { type: Array, default: () => [] },  // 1 fila por asignación
+  ref_mode: { type: String, default: 'plan' }    // 'plan' | 'hoy'
+})
+
+function confirmCheckin(reservaId) {
+  // SweetAlert2 global (si lo usás global)
+  Swal.fire({
+    title: '¿Confirmar check-in?',
+    text: 'Se verificará disponibilidad y se ocuparán las habitaciones vigentes.',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, confirmar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+  }).then((result) => {
+    if (!result.isConfirmed) return
+
+    // usa ruta nombrada; ver más abajo la definición
+    router.post(route('checkin.do', reservaId), {}, {
+      onSuccess: () => {
+        Swal.fire('¡Éxito!', 'Check-in realizado.', 'success')
+      },
+      onError: (errors) => {
+        Swal.fire('Error', errors?.error || 'No se pudo realizar el check-in.', 'error')
+      },
+      preserveScroll: true,
+    })
+  })
+}
+
+function fmt(d) {
+  return d ?? '—'
+}
 </script>
 
 <template>
-
   <Head title="Check In" />
 
   <AuthenticatedLayout>
@@ -15,37 +49,59 @@ import { ref } from 'vue';
       </h2>
     </template>
 
-    <div v-if="$page.props.errors.error" class="bg-red-100 text-red-700 p-4 mb-4 rounded">
+    <div class="mb-4 flex gap-2">
+      <Link :href="route('checkin.index', { ref: 'plan' })"
+            class="px-3 py-1 border rounded"
+            :class="{ 'bg-blue-600 text-white': props.ref_mode === 'plan' }">
+        Planificadas
+      </Link>
+      <Link :href="route('checkin.index', { ref: 'hoy' })"
+            class="px-3 py-1 border rounded"
+            :class="{ 'bg-blue-600 text-white': props.ref_mode === 'hoy' }">
+        Solo hoy
+      </Link>
+    </div>
+
+    <div v-if="$page.props.errors?.error" class="mb-4 rounded bg-red-100 p-3 text-red-700">
       {{ $page.props.errors.error }}
     </div>
-    <div class="py-12">
+
+    <div class="py-6">
       <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
         <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
           <div class="p-6 text-gray-900">
-            <!-- Tabla de reservas pendientes -->
-            <table class="min-w-full bg-white border">
-              <thead>
+            <table class="min-w-full table-auto border">
+              <thead class="bg-gray-50">
                 <tr>
-                  <th class="py-2 px-4 border">Huésped</th>
-                  <th class="py-2 px-4 border">Fecha de Reserva</th>
-                  <th class="py-2 px-4 border">Fecha Check-in</th>
-                  <th class="py-2 px-4 border">Fecha Check-out</th>
-                  <th class="py-2 px-4 border">Estado</th>
-                  <th class="py-2 px-4 border">Acciones</th>
+                  <th class="border px-4 py-2 text-left">Huésped</th>
+                  <th class="border px-4 py-2 text-left">Habitación</th>
+                  <th class="border px-4 py-2 text-left">Fecha de Reserva</th>
+                  <th class="border px-4 py-2 text-left">Check-in (asig.)</th>
+                  <th class="border px-4 py-2 text-left">Check-out (asig.)</th>
+                  <th class="border px-4 py-2 text-left">Estado</th>
+                  <th class="border px-4 py-2 text-left">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="reserva in reservas" :key="reserva.id">
-                  <td class="py-2 px-4 border">{{ reserva.huesped }}</td>
-                  <td class="py-2 px-4 border">{{ reserva.fecha_reserva }}</td>
-                  <td class="py-2 px-4 border">{{ reserva.fecha_checkin }}</td>
-                  <td class="py-2 px-4 border">{{ reserva.fecha_checkout }}</td>
-                  <td class="py-2 px-4 border">{{ reserva.estado }}</td>
-                  <td class="py-2 px-4 border">
-                    <button @click="confirmCheckin(reserva.id)"
-                      class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                <tr v-for="r in props.reservas" :key="r.asignacion_id" class="hover:bg-gray-50">
+                  <td class="border px-4 py-2">{{ r.huesped_nombre }}</td>
+                  <td class="border px-4 py-2">{{ r.habitacion_numero }}</td>
+                  <td class="border px-4 py-2">{{ fmt(r.fecha_reserva) }}</td>
+                  <td class="border px-4 py-2">{{ fmt(r.checkin_det) }}</td>
+                  <td class="border px-4 py-2">{{ fmt(r.checkout_det) }}</td>
+                  <td class="border px-4 py-2 capitalize">{{ r.estado }}</td>
+                  <td class="border px-4 py-2">
+                    <button
+                      class="rounded bg-blue-600 px-3 py-1 text-white hover:bg-blue-700"
+                      @click="confirmCheckin(r.reserva_id)"
+                    >
                       Check-in
                     </button>
+                  </td>
+                </tr>
+                <tr v-if="!props.reservas.length">
+                  <td class="px-4 py-6 text-center text-gray-500" colspan="7">
+                    No hay reservas para mostrar.
                   </td>
                 </tr>
               </tbody>
@@ -56,49 +112,3 @@ import { ref } from 'vue';
     </div>
   </AuthenticatedLayout>
 </template>
-
-<script>
-export default {
-  props: {
-    reservas: Array,
-  },
-  methods: {
-    confirmCheckin(reservaId) {
-      // Mostrar confirmación con SweetAlert2
-      Swal.fire({
-        title: '¿Confirmar check-in?',
-        text: '¿Estás seguro de que deseas realizar el check-in para esta reserva?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, confirmar',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-      }).then((result) => {
-        if (result.isConfirmed) {
-          this.$inertia.post(`/checkin/${reservaId}`, {}, {
-            onSuccess: () => {
-              // Mostrar mensaje de éxito
-              Swal.fire({
-                title: '¡Éxito!',
-                text: 'Check-in realizado con éxito.',
-                icon: 'success',
-                confirmButtonText: 'Aceptar',
-              });
-            },
-            onError: (errors) => {
-              // Mostrar mensaje de error
-              Swal.fire({
-                title: 'Error',
-                text: errors.error || 'Ocurrió un error al realizar el check-in.',
-                icon: 'error',
-                confirmButtonText: 'Aceptar',
-              });
-            },
-          });
-        }
-      });
-    },
-  },
-};
-</script>
