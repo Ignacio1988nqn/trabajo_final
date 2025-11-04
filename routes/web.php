@@ -101,4 +101,13 @@ Route::middleware(['auth'])->group(function () {
 Route::get('/limpieza', [LimpiezaController::class, 'index'])->middleware(['auth', 'verified'])->name('limpieza.index');
 Route::post('/limpieza/{id}/disponible', [LimpiezaController::class, 'marcarDisponible'])->middleware(['auth', 'verified'])->name('limpieza.disponible');
 
+
+
+Route::get('/disponibilidad/calendario', [DisponibilidadController::class, 'calendario'])
+    ->name('disponibilidad.calendario');
+
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');
+});
 require __DIR__ . '/auth.php';
