@@ -10,7 +10,7 @@ class GastoItems extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['nombre', 'descripcion', 'precio', 'tipo','stock'];
+    protected $fillable = ['nombre', 'descripcion', 'precio', 'tipo', 'stock'];
 
     public function gastos()
     {

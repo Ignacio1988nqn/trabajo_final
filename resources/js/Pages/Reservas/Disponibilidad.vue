@@ -1,7 +1,7 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import { useCalendarioDisponibilidad  } from '@/composables/useCalendarioDisponibilidad'
+import { useCalendarioDisponibilidad  } from '@/composables/useDisponibilidadCalendar'
 const props = defineProps({
   from: String,
   days: Number,

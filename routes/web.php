@@ -110,4 +110,6 @@ Route::get('/disponibilidad/calendario', [DisponibilidadController::class, 'cale
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');
 });
+
+
 require __DIR__ . '/auth.php';
