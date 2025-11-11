@@ -14,7 +14,8 @@ use App\Http\Controllers\HabitacionController;
 use App\Http\Controllers\DisponibilidadController;
 use App\Http\Controllers\GastoItemsController;
 use App\Http\Controllers\LimpiezaController;
-
+use App\Http\Controllers\EstadisticasController;
+use App\Http\Controllers\UserController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -39,8 +40,7 @@ Route::get('/counter', function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('huesped', HuespedController::class);
 });
-Route::get('/reservas/buscarhuespedes', [ReservaController::class, 'buscarHuespedes'])
-    ->name('reservas.buscarHuespedes');
+
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // Listado
@@ -68,9 +68,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::get('/checkin', [CheckinController::class, 'index'])->middleware(['auth', 'verified'])->name('checkin.index');
 Route::post('/checkin/{reserva}', [CheckinController::class, 'checkin'])->middleware(['auth', 'verified'])->name('checkin.store');
-Route::get('/checkin', [CheckinController::class, 'index'])->name('checkin.index');
 
-Route::post('/checkin/{reserva}', [CheckinController::class, 'checkin'])->name('checkin.do');
 Route::get('/checkout', [CheckoutController::class, 'index'])->middleware(['auth', 'verified'])->name('checkout.index');
 Route::post('/checkout/{reserva}', [CheckoutController::class, 'checkout'])->middleware(['auth', 'verified'])->name('checkout.store');
 
@@ -100,21 +98,14 @@ Route::middleware(['auth'])->group(function () {
 
 Route::get('/limpieza', [LimpiezaController::class, 'index'])->middleware(['auth', 'verified'])->name('limpieza.index');
 Route::post('/limpieza/{id}/disponible', [LimpiezaController::class, 'marcarDisponible'])->middleware(['auth', 'verified'])->name('limpieza.disponible');
-
-Route::get('/items', fn() => redirect()->route('gasto-items.index'))
-    ->middleware(['auth', 'verified'])
-    ->name('items.index');
-
-Route::get('/limpieza', [LimpiezaController::class, 'index'])
-    ->middleware(['auth', 'verified'])
-    ->name('limpieza.index');
-
-Route::get('/disponibilidad/calendario', [DisponibilidadController::class, 'calendario'])
-    ->name('disponibilidad.calendario');
-
+Route::get('/estadisticas', [EstadisticasController::class, 'index'])->name('estadisticas.index');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');
+    // Route::middleware('can:isAdmin')->group(function () {
+        Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');
+        Route::get('/usuarios/create', [UserController::class, 'create'])->name('usuarios.create');
+        Route::post('/usuarios', [UserController::class, 'store'])->name('usuarios.store');
+    // });
 });
 
 require __DIR__ . '/auth.php';
