@@ -16,14 +16,21 @@ class ReservaController extends Controller
     /* =========================
      |  Create (form data)
      ==========================*/
-    public function create()
+    public function create(Request $request)
     {
+        // vienen de ?from=YYYY-MM-DD&to=YYYY-MM-DD (o null si entraste normal)
+        $from = $request->query('from');   // ej: 2025-11-19
+        $to   = $request->query('to');     // ej: 2025-11-21
+
         return Inertia::render('Reservas/Create', [
             'huespedes'    => $this->buildHuespedesOptions(),
             'habitaciones' => $this->allHabitacionesLite(),
+
+            // 🔹 props nuevas para el front
+            'initialFrom'  => $from,
+            'initialTo'    => $to,
         ]);
     }
-
     /* =========================
      |  Store
      ==========================*/

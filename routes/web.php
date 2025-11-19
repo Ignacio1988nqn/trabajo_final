@@ -67,6 +67,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::get('/checkin', [CheckinController::class, 'index'])->middleware(['auth', 'verified'])->name('checkin.index');
+
 Route::post('/checkin/{reserva}', [CheckinController::class, 'checkin'])->middleware(['auth', 'verified'])->name('checkin.store');
 
 Route::get('/checkout', [CheckoutController::class, 'index'])->middleware(['auth', 'verified'])->name('checkout.index');
@@ -80,9 +81,11 @@ Route::post('/gastos', [GastosController::class, 'store'])->middleware(['auth', 
 Route::put('/habitaciones/{id}/estado', [HabitacionController::class, 'actualizarEstado'])->name('habitaciones.actualizarEstado');
 Route::get('/habitaciones', [HabitacionController::class, 'index'])->middleware(['auth', 'verified'])->name('habitaciones.index');
 
-Route::get('/disponibilidad', [DisponibilidadController::class, 'index'])->middleware(['auth', 'verified'])->name('disponibilidad.index');
+// Route::get('/disponibilidad', [DisponibilidadController::class, 'index'])->middleware(['auth', 'verified'])->name('disponibilidad.index');
 
-// Route::get('/habitaciones', [HabitacionController::class, 'index'])->name('habitaciones.index');
+Route::get('/disponibilidad', [DisponibilidadController::class, 'calendario'])->middleware(['auth', 'verified'])->name('disponibilidad.index');
+
+
 Route::get('/habitaciones/create', [HabitacionController::class, 'create'])->middleware(['auth', 'verified'])->name('habitaciones.create');
 Route::post('/habitaciones', [HabitacionController::class, 'store'])->middleware(['auth', 'verified'])->name('habitaciones.store');
 Route::post('/habitaciones/{id}/cambiar', [HabitacionController::class, 'cambiarHabitacion'])->middleware(['auth', 'verified'])->name('habitaciones.cambiarHabitacion');
@@ -102,10 +105,12 @@ Route::get('/estadisticas', [EstadisticasController::class, 'index'])->name('est
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // Route::middleware('can:isAdmin')->group(function () {
-        Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');
-        Route::get('/usuarios/create', [UserController::class, 'create'])->name('usuarios.create');
-        Route::post('/usuarios', [UserController::class, 'store'])->name('usuarios.store');
+    Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');
+    Route::get('/usuarios/create', [UserController::class, 'create'])->name('usuarios.create');
+    Route::post('/usuarios', [UserController::class, 'store'])->name('usuarios.store');
     // });
 });
+
+
 
 require __DIR__ . '/auth.php';

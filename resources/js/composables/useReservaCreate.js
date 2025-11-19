@@ -1,17 +1,20 @@
 import { reactive, watch } from 'vue'
 import { useForm } from '@inertiajs/vue3'
 
-export function useReservaCreate() {
+export function useReservaCreate(props) {
   /* ---------- Formulario ---------- */
   const form = useForm({
     huesped_id: '',
     estado: 'pendiente',
     observaciones: '',
     asignaciones: [
-      { habitacion_id: '', fecha_inicio: '', fecha_fin: '' }
-    ]
-  })
-
+      {
+    habitacion_id: '',
+    fecha_inicio: props.initialFrom || '',
+    fecha_fin:    props.initialTo   || '',
+      },
+  ], 
+})
   /* ---------- Disponibles por asignación ---------- */
   const disponibles = reactive({ 0: [] })   // mapa: idx -> habitaciones disponibles
   let debounceTimers = {}                   // para no spamear el endpoint

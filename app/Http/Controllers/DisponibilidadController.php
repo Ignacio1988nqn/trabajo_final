@@ -46,14 +46,30 @@ class DisponibilidadController extends Controller
 
     public function calendario(Request $request)
     {
-        $from = $request->input('from', now()->toDateString());
-        $days = (int) ($request->input('days', 14)); // cantidad de días a mostrar
-        $tipo = $request->input('tipo', null);       // simple/doble/triple/cuadruple o null
+        // 1) Normalizar lo que viene del request
+        $rawFrom = $request->input('from');      // puede venir "" o null
+        $rawDays = $request->input('days');      // puede venir "" o null
+        $rawTipo = $request->input('tipo');      // "" = todos
+
+        // Si no viene o viene vacío => hoy
+        $from = $rawFrom ?: now()->toDateString();
+
+        // Si no viene o viene vacío => 7 días
+        $days = (int) ($rawDays ?: 7);
+        if ($days <= 0) {
+            $days = 7;
+        }
+
+        // "" lo tratamos como null (Todos)
+        $tipo = $rawTipo !== '' ? $rawTipo : null;
+
+        // ---------------------------------------------------
+        // A PARTIR DE ACÁ VA IGUAL QUE LO TENÍAS
+        // ---------------------------------------------------
 
         $start = Carbon::parse($from)->startOfDay();
         $end   = (clone $start)->addDays($days)->startOfDay(); // rango [start, end)
 
-        // Habitaciones + asignaciones que SOLAPAN el rango
         $roomsQuery = Habitaciones::query()
             ->when($tipo, fn($q) => $q->where('tipo', $tipo))
             ->with(['asignaciones' => function ($q) use ($start, $end) {
@@ -69,96 +85,103 @@ class DisponibilidadController extends Controller
 
         $rooms = $roomsQuery->get();
 
-        // Array de días para encabezado
-        // $daysArr = [];
-        // for ($d = 0; $d < $days; $d++) {
-        //     $day = (clone $start)->addDays($d);
-        //     $daysArr[] = [
-        //         'iso' => $day->toDateString(),
-        //         'dow' => $day->isoFormat('dd'),  // LU MA MI...
-        //         'dom' => $day->format('d'),      // 01..31
-        //     ];
-        // }
         Carbon::setLocale('es');
         $daysArr = [];
         for ($d = 0; $d < $days; $d++) {
             $day = (clone $start)->addDays($d);
 
-            // 2 letras (Lu, Ma, Mi...):
-            $dow2 = mb_strtoupper($day->isoFormat('dd'), 'UTF-8');
-
-            // 3 letras (Lun, Mar, Mié...):
-            $dow3 = rtrim($day->isoFormat('ddd'), '.'); // algunas locales traen punto final
+            $dow3 = rtrim($day->isoFormat('ddd'), '.');
             $dow3 = mb_convert_case($dow3, MB_CASE_TITLE, 'UTF-8');
 
             $daysArr[] = [
                 'iso' => $day->toDateString(),
-                'dow' => $dow3,                 // o $dow2 si preferís 2 letras
-                'dom' => $day->format('d'),     // 01..31
+                'dow' => $dow3,
+                'dom' => $day->format('d'),
             ];
         }
 
-
-
-
-        // Mapear a DTO amigable para el front
         $roomDTO = $rooms->map(function ($h) use ($start, $end) {
             $bookings = $h->asignaciones->map(function ($a) use ($start, $end) {
                 $ci = Carbon::parse($a->fecha_inicio)->startOfDay();
                 $co = $a->fecha_fin ? Carbon::parse($a->fecha_fin)->startOfDay() : null;
 
-                // Clampear al rango visible
                 $visibleStart = $ci->max($start);
-                $visibleEnd   = ($co ?? $end)->min($end); // si fin null => muestro hasta fin de rango
+                $visibleEnd   = ($co ?? $end)->min($end);
 
-                // Datos de huésped
-                $reserva   = $a->reserva;
-                $huesped   = '—';
+                // $reserva = $a->reserva;
+                // $huesped = '—';
+                // if ($reserva && $reserva->huesped) {
+                //     $p = $reserva->huesped->personas;
+                //     $e = $reserva->huesped->empresas;
+                //     $huesped = $p
+                //         ? trim(($p->apellido ?? '') . ' ' . ($p->nombre ?? ''))
+                //         : ($e->razon_social ?? '—');
+                // }
+                $reserva = $a->reserva;
+                $huesped = '—';
+
                 if ($reserva && $reserva->huesped) {
-                    $p = $reserva->huesped->personas;
-                    $e = $reserva->huesped->empresas;
-                    $huesped = $p ? trim(($p->apellido ?? '') . ' ' . ($p->nombre ?? '')) : ($e->razon_social ?? '—');
+                    $hModel = $reserva->huesped;
+
+                    $p = $hModel->personas;
+                    $e = $hModel->empresas;
+
+                    $parts = [];
+
+                    // Si hay persona, la agregamos
+                    if ($p) {
+                        $parts[] = trim(($p->apellido ?? '') . ' ' . ($p->nombre ?? ''));
+                    }
+
+                    // Si hay empresa, también la agregamos
+                    if ($e) {
+                        $parts[] = $e->razon_social ?? '';
+                    }
+
+                    // Unimos lo que haya con " / "
+                    if (count($parts)) {
+                        $huesped = implode(' / ', array_filter($parts));
+                    } else {
+                        $huesped = 'Sin datos';
+                    }
                 }
 
-                // Estado visual
-                $estadoReserva = $reserva?->estado ?? 'pendiente'; // 'pendiente' | 'checkin' | 'checkout' | 'cancelada'
+                $estadoReserva = $reserva?->estado ?? 'pendiente';
                 $state = match ($estadoReserva) {
-                    'checkin'  => 'ocupada',
-                    'checkout' => 'checkout', // por si querés colorear distintas fases
+                    'checkin'   => 'ocupada',
+                    'checkout'  => 'checkout',
                     'cancelada' => 'cancelada',
-                    default    => 'pendiente',
+                    default     => 'pendiente',
                 };
+
 
                 return [
                     'id'         => $a->id,
                     'reserva_id' => $reserva?->id,
                     'huesped'    => $huesped,
                     'start'      => $visibleStart->toDateString(),
-                    'end'        => $visibleEnd->toDateString(), // exclusivo (lo tratamos como [start, end) en el front)
+                    'end'        => $visibleEnd->toDateString(),
                     'full_start' => $ci->toDateString(),
                     'full_end'   => $co?->toDateString(),
                     'state'      => $state,
                 ];
             })->values();
 
-            // Marcadores globales (mantenimiento/limpieza) para toda la fila
-            // Si querés partirlos por fechas, tendrías que guardar histórico; aquí usamos estado_actual como "bloque".
             $blocks = in_array($h->estado_actual, ['mantenimiento', 'limpieza'])
                 ? [[
-                    'start' => null, // todo el rango
+                    'start' => null,
                     'end'   => null,
-                    'state' => $h->estado_actual, // 'mantenimiento'|'limpieza'
-
+                    'state' => $h->estado_actual,
                 ]]
                 : [];
 
             return [
-                'id'      => $h->id,
-                'numero'  => $h->numero,
-                'tipo'    => $h->tipo,
-                'estado'  => $h->estado_actual,
+                'id'       => $h->id,
+                'numero'   => $h->numero,
+                'tipo'     => $h->tipo,
+                'estado'   => $h->estado_actual,
                 'bookings' => $bookings,
-                'blocks'  => $blocks,
+                'blocks'   => $blocks,
             ];
         })->values();
 

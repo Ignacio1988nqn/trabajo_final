@@ -23,14 +23,14 @@ export function useHuespedSearch(initialText = '', initialId = '') {
     state.cargando = true
     try {
       const { data } = await window.axios.get(
-        route('reservas.buscarHuespedes'),
+        route('huespedes.buscar'),
         { params: { q } }
       )
       state.opciones = data
       state.abierto  = data.length > 0
       state.highlighted = data.length ? 0 : -1
     } catch (e) {
-      console.error('buscarHuespedes error:', e)
+      console.error('Error buscando huéspedes:', e)
       state.opciones = []
       state.abierto  = false
     } finally {
