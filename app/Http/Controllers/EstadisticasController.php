@@ -11,11 +11,37 @@ use Carbon\Carbon;
 
 class EstadisticasController extends Controller
 {
-    public function index(Request $request)
+    private function buildKpis()
     {
         $estados = Habitaciones::select('estado_actual', DB::raw('count(*) as total'))
             ->groupBy('estado_actual')
             ->pluck('total', 'estado_actual');
+
+        $totalHabitaciones = Habitaciones::count();
+        $disponibles = $estados['disponible'] ?? 0;
+        $ocupadas    = $estados['ocupada'] ?? 0;
+
+        $ocupacionHoy = $totalHabitaciones > 0
+            ? round(($ocupadas / $totalHabitaciones) * 100, 1)
+            : 0;
+
+        $checkinsHoy = DB::table('reservas')
+            ->whereDate('fecha_checkin', Carbon::today()->toDateString())
+            ->count();
+
+        return [
+            'estados' => $estados,
+            'kpis' => [
+                'ocupacion_hoy'            => $ocupacionHoy,
+                'habitaciones_disponibles' => $disponibles,
+                'checkins_hoy'             => $checkinsHoy,
+            ],
+        ];
+    }
+    public function index(Request $request)
+    {    // obtenés kpis y estados en un solo lugar
+        $kpiData = $this->buildKpis();
+        $estados = $kpiData['estados'];
 
         // === 2️⃣ Ocupación mensual (hasta el día actual) ===
         $hoy = Carbon::today();
@@ -78,6 +104,15 @@ class EstadisticasController extends Controller
             $historico[] = $ocupacion;
         }
 
+
+        // =====================
+        // KPI TARJETITAS
+        // =====================
+        $kpiData = $this->buildKpis();
+
+
+
+
         return Inertia::render('Estadisticas/Index', [
             'estados' => $estados,
             'ocupacionActual' => $porcentajeOcupacionActual,
@@ -86,6 +121,16 @@ class EstadisticasController extends Controller
                 'data' => $historico,
                 'labels' => $labels,
             ],
+            'kpis'             => $kpiData['kpis'],
+        ]);
+    }
+
+    public function dashboard()
+    {
+        $kpiData = $this->buildKpis();
+
+        return Inertia::render('Dashboard', [
+            'kpis' => $kpiData['kpis'],
         ]);
     }
 }
