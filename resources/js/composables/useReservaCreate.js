@@ -67,41 +67,82 @@ export function useReservaCreate(props) {
 
   /* ---------- Validación de solapes internos (misma habitación) ---------- */
   function rangosSeSolapan(a, b) {
-    // regla [inicio, fin): solapan si iniA < finB y iniB < finA
-    return a.fecha_inicio < b.fecha_fin && b.fecha_inicio < a.fecha_fin
+    return a.fecha_inicio < b.fecha_fin && b.fecha_inicio < a.fecha_fin;
   }
 
   /* ---------- Submit ---------- */
-  function submit () {
-    // 1) Campos obligatorios por fila
-    for (let i = 0; i < form.asignaciones.length; i++) {
-      const a = form.asignaciones[i]
-      if (!a.habitacion_id || !a.fecha_inicio || !a.fecha_fin) {
-        form.setError(`asignaciones.${i}.habitacion_id`, 'Completá habitación, inicio y fin')
-        return
-      }
-      if (a.fecha_fin < a.fecha_inicio) {
-        form.setError(`asignaciones.${i}.fecha_fin`, 'El fin debe ser posterior al inicio')
-        return
-      }
-    }
+   function submit() {
+  // Limpiar errores previos
+  form.clearErrors();
 
-    // 2) Evitar solapes internos de la MISMA habitación
-    for (let i = 0; i < form.asignaciones.length; i++) {
-      for (let j = i + 1; j < form.asignaciones.length; j++) {
-        const A = form.asignaciones[i], B = form.asignaciones[j]
-        if (A.habitacion_id && B.habitacion_id && A.habitacion_id === B.habitacion_id) {
-          if (rangosSeSolapan(A, B)) {
-            form.setError(`asignaciones.${i}.habitacion_id`, 'Se superpone con otra fila')
-            form.setError(`asignaciones.${j}.habitacion_id`, 'Se superpone con otra fila')
-            return
-          }
+  // 1. Validar que todas las filas estén completas
+  let hasError = false;
+  for (let i = 0; i < form.asignaciones.length; i++) {
+    const a = form.asignaciones[i];
+    if (!a.habitacion_id || !a.fecha_inicio || !a.fecha_fin) {
+      form.setError(`asignaciones.${i}.habitacion_id`, 'Completá habitación, check-in y check-out');
+      hasError = true;
+    }
+    if (a.fecha_fin <= a.fecha_inicio) {
+      form.setError(`asignaciones.${i}.fecha_fin`, 'Check-out debe ser posterior al check-in');
+      hasError = true;
+    }
+  }
+  if (hasError) return;
+
+  // 2. Validar solapamiento de la MISMA habitación entre filas (igual que tu backend)
+  for (let i = 0; i < form.asignaciones.length; i++) {
+    for (let j = i + 1; j < form.asignaciones.length; j++) {
+      const A = form.asignaciones[i];
+      const B = form.asignaciones[j];
+
+      if (A.habitacion_id && B.habitacion_id && A.habitacion_id === B.habitacion_id) {
+        if (rangosSeSolapan(A, B)) {
+          form.setError(`asignaciones.${i}.habitacion_id`, 'Habitación duplicada con fechas superpuestas');
+          form.setError(`asignaciones.${j}.habitacion_id`, 'Habitación duplicada con fechas superpuestas');
+          return;
         }
       }
     }
-
-    form.post(route('reservas.store'))
   }
+
+  // 3. Payload limpio y correcto
+  const payload = {
+    huesped_id: form.huesped_id ? Number(form.huesped_id) : null,
+    estado: form.estado || 'pendiente',
+    observaciones: form.observaciones?.trim() || null,
+    asignaciones: form.asignaciones.map(a => ({
+      habitacion_id: Number(a.habitacion_id),
+      fecha_inicio: a.fecha_inicio,
+      fecha_fin: a.fecha_fin,
+    }))
+  };
+
+  // 4. Enviar
+  form.post(route('reservas.store'), {
+    data: payload,
+    preserveState: true,
+    preserveScroll: true,
+    onSuccess: () => {
+      Swal.fire({
+        icon: 'success',
+        title: '¡Reserva creada!',
+        text: 'Todo perfecto.',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    },
+    onError: (errors) => {
+      // Esto es clave: los errores del backend ahora se muestran correctamente
+      console.log('Errores del servidor:', errors);
+      Swal.fire({
+        icon: 'error',
+        title: 'No se pudo guardar',
+        text: 'Revisá los campos marcados en rojo',
+      });
+    }
+  });
+}
 
   /* ---------- Watchers: cuando cambian fechas, refrescar lista ---------- */
   function setupWatchers() {

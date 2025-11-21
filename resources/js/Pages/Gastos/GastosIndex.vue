@@ -1,4 +1,5 @@
 <template>
+
     <Head title="Consultar Gastos de Reservas" />
 
     <AuthenticatedLayout>
@@ -12,31 +13,126 @@
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
                     <div class="p-6 text-gray-900">
-                        <table class="min-w-full bg-white border">
-                            <thead>
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-4 py-2 border">ID</th>
-                                    <th class="px-4 py-2 border">Cliente</th>
-                                    <th class="px-4 py-2 border">Fecha Inicio</th>
-                                    <th class="px-4 py-2 border">Estado</th>
-                                    <th class="px-4 py-2 border">Acciones</th>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Reserva
+                                    </th>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Huésped
+                                    </th>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Habitación
+                                    </th>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Estancia
+                                    </th>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Total Gastos
+                                    </th>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Estado
+                                    </th>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Acciones
+                                    </th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr v-for="reserva in reservas" :key="reserva.id">
-                                    <td class="px-4 py-2 border">{{ reserva.id }}</td>
-                                    <td class="px-4 py-2 border">{{ reserva.cliente || 'Huésped no encontrado' }}</td>
-                                    <td class="px-4 py-2 border">{{ formatFecha(reserva.fecha_inicio) }}</td>
-                                    <td class="px-4 py-2 border">{{ reserva.estado }}</td>
-                                    <td class="px-4 py-2 border">
-                                        <Link :href="route('gastos.show', reserva.id)"
-                                            class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">
-                                            Consultar
+
+                            <tbody v-if="reservas.length" class="bg-white divide-y divide-gray-200">
+                                <tr v-for="reserva in reservas" :key="reserva.id"
+                                    class="hover:bg-gray-50 transition-colors duration-200">
+                                    <!-- ID Reserva -->
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        #{{ reserva.id }}
+                                    </td>
+
+                                    <!-- Huésped -->
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        {{ reserva.cliente || reserva.huesped_nombre || 'Sin nombre' }}
+                                    </td>
+
+                                    <!-- Habitación -->
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span
+                                            class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800">
+                                            {{ reserva.habitacion_numero || '—' }}
+                                        </span>
+                                    </td>
+
+                                    <!-- Rango de fechas -->
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                        <div class="flex flex-col">
+                                            <span class="text-xs text-gray-500">In</span>
+                                            {{ formatFecha(reserva.fecha_inicio) || formatFecha(reserva.checkin_det) }}
+                                            <span class="text-xs text-gray-500 mt-1">Out</span>
+                                            {{ formatFecha(reserva.fecha_fin) || formatFecha(reserva.checkout_det) ||
+                                            '—' }}
+                                        </div>
+                                    </td>
+
+                                    <!-- Total Gastos (puedes calcularlo en el backend o con un computed) -->
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                                        {{ reserva.total_gastos ? '$' + Number(reserva.total_gastos).toLocaleString() :
+                                        '$0' }}
+                                    </td>
+
+                                    <!-- Estado de la reserva -->
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span
+                                            class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full capitalize"
+                                            :class="{
+                                                'bg-yellow-100 text-yellow-800': ['pendiente', 'confirmada'].includes(reserva.estado),
+                                                'bg-green-100 text-green-800': reserva.estado === 'checkin',
+                                                'bg-blue-100 text-blue-800': reserva.estado === 'checkout',
+                                                'bg-red-100 text-red-800': reserva.estado === 'cancelada',
+                                                'bg-gray-100 text-gray-800': !reserva.estado
+                                            }">
+                                            {{ reserva.estado || 'desconocido' }}
+                                        </span>
+                                    </td>
+
+                                    <!-- Botón Ver detalle -->
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <Link :href="route('gastos.asignaciones', reserva.id)"
+                                            class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                        Ver detalle
                                         </Link>
                                     </td>
                                 </tr>
                             </tbody>
+
+                            <!-- Sin reservas con gastos -->
+                            <tbody v-else>
+                                <tr>
+                                    <td colspan="7" class="px-6 py-12 text-center text-gray-500 bg-gray-50">
+                                        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none"
+                                            stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                                        </svg>
+                                        <p class="text-lg font-medium">No hay consumos registrados aún</p>
+                                        <p class="text-sm mt-1">Cuando los huéspedes consuman servicios aparecerán aquí.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </tbody>
                         </table>
+
                     </div>
                 </div>
             </div>

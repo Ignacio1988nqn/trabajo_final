@@ -127,4 +127,23 @@ class Reservas extends Model
     {
         return $this->asignacionVigenteHoy();
     }
+
+
+    public function detalles()
+    {
+        return $this->hasMany(ReservaDetalle::class, 'reserva_id');
+        // Si tu tabla se llama reserva_detalles y el modelo ReservaDetalle.php → esto funciona perfecto
+    }
+
+    public function asignacionesHabitacion()
+    {
+        return $this->hasManyThrough(
+            Asignaciones_habitacion::class,
+            ReservaDetalle::class,
+            'reserva_id',         // Foreign key en reserva_detalles
+            'reserva_detalle_id', // Foreign key en asignaciones_habitacion
+            'id',
+            'id'
+        );
+    }
 }
