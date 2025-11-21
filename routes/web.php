@@ -72,14 +72,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::get('/checkin', [CheckinController::class, 'index'])->middleware(['auth', 'verified'])->name('checkin.index');
 
-Route::post('/checkin/{reserva}', [CheckinController::class, 'checkin'])->middleware(['auth', 'verified'])->name('checkin.store');
+// Route::post('/checkin/{reserva}', [CheckinController::class, 'checkin'])->middleware(['auth', 'verified'])->name('checkin.store');
 
 Route::get('/checkout', [CheckoutController::class, 'index'])->middleware(['auth', 'verified'])->name('checkout.index');
-Route::post('/checkout/{reserva}', [CheckoutController::class, 'checkout'])->middleware(['auth', 'verified'])->name('checkout.store');
+// Route::post('/checkout/{reserva}', [CheckoutController::class, 'checkout'])->middleware(['auth', 'verified'])->name('checkout.store');
 
-Route::get('/reservas/{reserva}/gastos/create', [GastosController::class, 'create'])->middleware(['auth', 'verified'])->name('gastos.create');
+// Route::get('/reservas/{reserva}/gastos/create', [GastosController::class, 'create'])->middleware(['auth', 'verified'])->name('gastos.create');
+// Route::get('/gastos', [GastosController::class, 'index'])->middleware(['auth', 'verified'])->name('gastos.index');
+// Route::get('/gastos/{reserva}', [GastosController::class, 'show'])->middleware(['auth', 'verified'])->name('gastos.show');
+Route::get('/gastos/{detalle}/create', [GastosController::class, 'create'])
+    ->name('gastos.create');
 Route::get('/gastos', [GastosController::class, 'index'])->middleware(['auth', 'verified'])->name('gastos.index');
-Route::get('/gastos/{reserva}', [GastosController::class, 'show'])->middleware(['auth', 'verified'])->name('gastos.show');
+Route::get('/gastos/{detalle}', [GastosController::class, 'show'])
+    ->name('gastos.show');
 Route::post('/gastos', [GastosController::class, 'store'])->middleware(['auth', 'verified'])->name('gastos.store');
 
 Route::put('/habitaciones/{id}/estado', [HabitacionController::class, 'actualizarEstado'])->name('habitaciones.actualizarEstado');
@@ -99,7 +104,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/gasto-items/create', [GastoItemsController::class, 'create'])->name('gasto-items.create');
     Route::post('/gasto-items', [GastoItemsController::class, 'store'])->name('gasto-items.store');
     Route::get('/gasto-items/{gastoItem}/edit', [GastoItemsController::class, 'edit'])->name('gasto-items.edit');
-    Route::put('/gasto-items/{gastoItem}', [GastoItemsController::class, 'update'])->name('gasto-items.update');
+    Route::post('/gasto-items/{gastoItem}', [GastoItemsController::class, 'update'])->name('gasto-items.update');
     Route::delete('/gasto-items/{gastoItem}', [GastoItemsController::class, 'destroy'])->name('gasto-items.destroy');
 });
 
@@ -115,6 +120,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // });
 });
 
+Route::post('/checkin/{detalle}', [CheckinController::class, 'checkin'])->middleware(['auth', 'verified'])
+    ->name('checkin.do');
 
+Route::post('/checkout/{detalle}', [CheckoutController::class, 'checkout'])->middleware(['auth', 'verified'])->name('checkout.do');
+
+Route::get('/gastos/asignaciones/{reservaId}', [GastosController::class, 'asignaciones'])
+    ->middleware(['auth', 'verified'])
+    ->name('gastos.asignaciones');
 
 require __DIR__ . '/auth.php';

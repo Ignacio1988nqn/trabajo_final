@@ -2,17 +2,23 @@
   <div class="relative p-4 rounded-lg shadow-md border-l-4 mb-4 transition-all duration-300" :class="cardClasses"
     ref="cardContainer">
 
-    <!-- Botón superior derecho para cambiar estado -->
-    <div class="absolute top-2 right-2 flex space-x-2">
-      <button @click.stop="toggleMenu" class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-md shadow-sm 
-               hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 
-               focus:ring-offset-1 transition-all duration-200">
-        Cambiar Estado
+    <div class="absolute top-4 right-6 flex gap-3">
+      <button @click.stop="toggleMenu"
+        class="p-3 rounded-full bg-gray-800/80 backdrop-blur-sm text-white hover:bg-gray-900 hover:shadow-lg transition-all duration-200"
+        title="Cambiar estado">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+            d="M12 6v.01M12 12v.01M12 18v.01M12 7a1 1 0 110-2 1 1 0 010 2zm0 6a1 1 0 110-2 1 1 0 010 2zm0 6a1 1 0 110-2 1 1 0 010 2z" />
+        </svg>
       </button>
-      <button v-if="room.estado_actual === 'ocupada'" @click.stop="toggleCambiarHabitacion" class="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-md shadow-sm 
-         hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 
-         focus:ring-offset-1 transition-all duration-200">
-        Cambiar Habitación
+
+      <button v-if="room.estado_actual === 'ocupada'" @click.stop="toggleCambiarHabitacion"
+        class="p-3 rounded-full bg-green-600 text-white hover:bg-green-700 hover:shadow-lg transition-all duration-200"
+        title="Cambiar habitación">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+            d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+        </svg>
       </button>
     </div>
 

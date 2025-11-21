@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Reservas;
-use App\Models\Huespedes;
 use App\Models\Habitaciones;
 use App\Models\Asignaciones_habitacion;
 use Illuminate\Http\Request;
@@ -51,17 +50,13 @@ class ReservaController extends Controller
             'asignaciones.required' => 'Agregá al menos una habitación.',
         ]);
 
-        // // (OPCIONAL) Mínimo 1 noche
-        // foreach ($data['asignaciones'] as $idx => $a) {
-        //     if (\Carbon\Carbon::parse($a['fecha_fin'])->diffInDays($a['fecha_inicio']) < 1) {
-        //         return back()->withErrors([
-        //             "asignaciones.$idx.fecha_fin" => 'Mínimo 1 noche.'
-        //         ])->withInput();
-        //     }
-        // }
 
         // 0) Solapes internos de la MISMA habitación (entre filas del formulario)
         if ($solape = $this->haySolapesInternosMismaHabitacion($data['asignaciones'])) {
+            return back()->withErrors([
+                'asignaciones.0.habitacion_id' => 'Habitación duplicada con fechas superpuestas.',
+                'asignaciones.2.habitacion_id' => 'Habitación duplicada con fechas superpuestas.',
+            ])->withInput();
             return back()->withErrors([
                 "asignaciones.{$solape['i']}.habitacion_id" => 'Esta habitación se superpone con otra fila.',
                 "asignaciones.{$solape['j']}.habitacion_id" => 'Esta habitación se superpone con otra fila.',
@@ -107,13 +102,22 @@ class ReservaController extends Controller
                 'observaciones'  => $data['observaciones'] ?? null,
             ]);
 
-            foreach ($data['asignaciones'] as $a) {
-                Asignaciones_habitacion::create([
+            foreach ($data['asignaciones'] as $index => $asignacion) {
+                $detalle = $reserva->detalles()->create([
+                    // 'nombre'         => "Habitación " . ($index + 1), // o podés poner algo más lindo después
+                    'codigo_interno' => null,
+                    'descripcion'    => "Habitación {$asignacion['habitacion_id']} del {$asignacion['fecha_inicio']} al {$asignacion['fecha_fin']}",
+                    'estado'         => $data['estado'],
+                    'fecha_checkin'  => $asignacion['fecha_inicio'],
+                    'fecha_checkout' => $asignacion['fecha_fin'],
+                ]);
+
+                $detalle->asignacionesHabitacion()->create([
                     'reserva_id'     => $reserva->id,
-                    'habitacion_id'  => $a['habitacion_id'],
-                    'fecha_inicio'   => $a['fecha_inicio'],
-                    'fecha_fin'      => $a['fecha_fin'], // <- obligatorio
-                    'motivo_cambio'  => $a['motivo_cambio'] ?? 'Asignación',
+                    'habitacion_id' => $asignacion['habitacion_id'],
+                    'fecha_inicio'  => $asignacion['fecha_inicio'],
+                    'fecha_fin'     => $asignacion['fecha_fin'],
+                    'motivo_cambio' => 'Asignación inicial',
                 ]);
             }
         });
@@ -234,38 +238,51 @@ class ReservaController extends Controller
             ->leftJoin('huespedes as hu', 'hu.id', '=', 'r.huesped_id')
             ->leftJoin('personas  as p',  'p.huesped_id',  '=', 'hu.id')
             ->leftJoin('empresas  as e',  'e.huesped_id',  '=', 'hu.id')
-            ->leftJoin('asignaciones_habitacion as ah', 'ah.reserva_id', '=', 'r.id')
+
+            // join con detalles (folios)
+            ->leftJoin('reserva_detalles as rd', 'rd.reserva_id', '=', 'r.id')
+
+            // join con asignaciones por detalle
+            ->leftJoin('asignaciones_habitacion as ah', 'ah.reserva_detalle_id', '=', 'rd.id')
+
             ->leftJoin('habitaciones as h', 'h.id', '=', 'ah.habitacion_id')
+
             ->orderByDesc('r.id')
             ->orderBy('h.numero')
             ->select([
+                DB::raw('COALESCE(rd.estado, r.estado) as estado'),
+
                 'r.id as reserva_id',
-                'r.estado',
+                'r.estado as reserva_estado',
 
-                // fechas por asignación (si no hay asignación, usa las de la reserva)
-                DB::raw('COALESCE(ah.fecha_inicio, r.fecha_checkin)  as checkin_det'),
-                DB::raw('COALESCE(ah.fecha_fin,    r.fecha_checkout) as checkout_det'),
+                'rd.id as detalle_id',
+                'rd.estado as detalle_estado',
+                'rd.codigo_interno',
+                'rd.descripcion as detalle_descripcion',
 
-                // datos de habitación/asignación
-                'ah.id      as asignacion_id',
-                'h.numero   as habitacion_numero',
-                'h.tipo     as habitacion_tipo',
+                'rd.fecha_checkin  as checkin_det',
+                'rd.fecha_checkout as checkout_det',
 
-                // nombre del huésped
+                'ah.id as asignacion_id',
+                'h.numero as habitacion_numero',
+                'h.tipo as habitacion_tipo',
+
                 DB::raw("
-                CASE 
-                    WHEN hu.tipo_huesped = 'persona' 
-                        THEN TRIM(CONCAT(COALESCE(p.apellido,''), ' ', COALESCE(p.nombre,'')))
-                    WHEN hu.tipo_huesped = 'empresa' 
-                        THEN COALESCE(e.razon_social, '')
-                    ELSE '—'
-                END AS huesped_nombre
-            "),
+        CASE 
+            WHEN hu.tipo_huesped = 'persona'
+                THEN TRIM(CONCAT(COALESCE(p.apellido,''), ' ', COALESCE(p.nombre,'')))
+            WHEN hu.tipo_huesped = 'empresa'
+                THEN COALESCE(e.razon_social, '')
+            ELSE '—'
+        END AS huesped_nombre
+    "),
             ])
+
+
             ->get();
 
         return Inertia::render('Reservas/Index', [
-            'reservas' => $rows,   // ahora es 1 fila por asignación (o 1 por reserva si no tiene asignaciones)
+            'reservas' => $rows, // 1 fila por asignación, o por detalle si no hay asignaciones
         ]);
     }
 
