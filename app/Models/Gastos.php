@@ -11,6 +11,7 @@ class Gastos extends Model
     protected $table = 'gastos';
     protected $fillable = [
         'reserva_id',
+        'reserva_detalle_id',
         'gasto_item_id',
         'fecha',
         'monto',
@@ -26,5 +27,9 @@ class Gastos extends Model
     public function item()
     {
         return $this->belongsTo(GastoItems::class, 'gasto_item_id');
+    }
+    public function reservaDetalle()
+    {
+        return $this->belongsTo(ReservaDetalle::class, 'reserva_detalle_id');
     }
 }
