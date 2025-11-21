@@ -3,6 +3,7 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head } from "@inertiajs/vue3";
 import CardLink from "@/Components/CardLink.vue";
 import KpiCard from "@/Components/KpiCard.vue";
+import { useDashboardCards } from "@/composables/useDashboardCards";
 
 const props = defineProps({
     kpis: {
@@ -14,6 +15,9 @@ const props = defineProps({
         }),
     },
 });
+
+// 🧠 toda la magia de roles y visibilidad viene del composable
+const { visibleCards } = useDashboardCards();
 </script>
 
 <template>
@@ -45,45 +49,26 @@ const props = defineProps({
         </template>
 
         <!-- GRID de accesos -->
+        <!-- <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <CardLink
+                v-for="card in visibleCards"
+                :key="card.title"
+                :title="card.title"
+                :desc="card.desc"
+                :to="route(card.routeName)"
+            />
+        </section> -->
+        <!-- GRID de accesos -->
         <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <CardLink
-                title="Huésped"
-                desc="Crear y administrar huéspedes"
-                :to="route('huesped.index')"
-            />
-            <CardLink
-                title="Reservas"
-                desc="Gestionar reservas y calendario"
-                :to="route('reservas.index')"
-            />
-            <CardLink
-                title="Check-In"
-                desc="Ingresos y asignaciones"
-                :to="route('checkin.index')"
-            />
-            <CardLink
-                title="Check-Out"
-                desc="Egresos y paso a limpieza"
-                :to="route('checkout.index')"
-            />
-            <CardLink
-                title="Habitaciones"
-                desc="Estados y mantenimiento"
-                :to="route('habitaciones.index')"
-            />
-            <CardLink
-                title="Disponibilidad"
-                desc="Vista de ocupación"
-                :to="route('disponibilidad.index')"
-            />
-            <CardLink
-                title="Gastos"
-                desc="Consumos y cargos"
-                :to="route('gastos.index')"
+                v-for="card in visibleCards"
+                :key="card.title"
+                :title="card.title"
+                :desc="card.desc"
+                :to="route(card.routeName)"
             />
         </section>
-
-        <!-- KPIs con numeritos animados -->
+        <!-- KPIs -->
         <section class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <KpiCard
                 label="Ocupación"
