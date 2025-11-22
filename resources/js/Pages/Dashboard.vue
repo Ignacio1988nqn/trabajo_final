@@ -48,17 +48,6 @@ const { visibleCards } = useDashboardCards();
             </div>
         </template>
 
-        <!-- GRID de accesos -->
-        <!-- <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <CardLink
-                v-for="card in visibleCards"
-                :key="card.title"
-                :title="card.title"
-                :desc="card.desc"
-                :to="route(card.routeName)"
-            />
-        </section> -->
-        <!-- GRID de accesos -->
         <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <CardLink
                 v-for="card in visibleCards"
