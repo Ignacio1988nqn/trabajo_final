@@ -1,71 +1,74 @@
 <template>
-  <div class="relative p-4 rounded-lg shadow-md border-l-4 mb-4 transition-all duration-300" :class="cardClasses"
-    ref="cardContainer">
+  <!-- Solo renderizamos cuando room existe -->
+  <div v-if="room && room.id" class="relative p-4 rounded-lg shadow-md border-l-4 mb-4 transition-all duration-300"
+    :class="cardClasses" ref="cardContainer">
+    <!-- Botones de acción (solo admin y recepción) -->
+    <template v-if="['admin', 'recepcion'].includes($page.props.auth?.user?.rol)">
+      <div class="absolute top-4 right-6 flex gap-3">
+        <!-- Botón menú de estados -->
+        <button v-if="estadosDisponibles.length > 0" @click.stop="toggleMenu"
+          class="p-3 rounded-full bg-gray-800/80 backdrop-blur-sm text-white hover:bg-gray-900 hover:shadow-lg transition-all duration-200"
+          title="Cambiar estado">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+              d="M12 6v.01M12 12v.01M12 18v.01M12 7a1 1 0 110-2 1 1 0 010 2zm0 6a1 1 0 110-2 1 1 0 010 2zm0 6a1 1 0 110-2 1 1 0 010 2z" />
+          </svg>
+        </button>
 
-    <div class="absolute top-4 right-6 flex gap-3">
-      <button @click.stop="toggleMenu"
-        class="p-3 rounded-full bg-gray-800/80 backdrop-blur-sm text-white hover:bg-gray-900 hover:shadow-lg transition-all duration-200"
-        title="Cambiar estado">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-            d="M12 6v.01M12 12v.01M12 18v.01M12 7a1 1 0 110-2 1 1 0 010 2zm0 6a1 1 0 110-2 1 1 0 010 2zm0 6a1 1 0 110-2 1 1 0 010 2z" />
-        </svg>
-      </button>
+        <!-- Botón cambiar habitación (solo si está ocupada) -->
+        <button v-if="room.estado_actual === 'ocupada'" @click.stop="toggleCambiarHabitacion"
+          class="p-3 rounded-full bg-green-600 text-white hover:bg-green-700 hover:shadow-lg transition-all duration-200"
+          title="Cambiar habitación">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+              d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+          </svg>
+        </button>
+      </div>
+    </template>
 
-      <button v-if="room.estado_actual === 'ocupada'" @click.stop="toggleCambiarHabitacion"
-        class="p-3 rounded-full bg-green-600 text-white hover:bg-green-700 hover:shadow-lg transition-all duration-200"
-        title="Cambiar habitación">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-            d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-        </svg>
-      </button>
-    </div>
-
-    <!-- Menú desplegable para cambiar estado -->
-    <div v-if="mostrarMenu" class="absolute right-0 mt-2 w-40 bg-white border rounded-md shadow-lg z-10">
+    <!-- Menú de cambio de estado (solo opciones válidas) -->
+    <div v-if="mostrarMenu" class="absolute right-6 top-16 mt-2 w-40 bg-white border rounded-md shadow-lg z-20">
       <ul>
-        <li v-for="estado in estados" :key="estado" @click="cambiarEstado(estado)"
-          class="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer">
+        <li v-for="estado in estadosDisponibles" :key="estado" @click="cambiarEstado(estado)"
+          class="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer first:rounded-t-md last:rounded-b-md">
           {{ capitalizar(estado) }}
         </li>
       </ul>
     </div>
 
-    <!-- Formulario para cambiar habitación -->
+    <!-- Formulario cambio de habitación -->
     <div v-if="mostrarFormularioCambio"
-      class="absolute right-0 mt-2 w-64 bg-white border rounded-md shadow-lg z-10 p-4">
-      <h4 class="text-sm font-medium mb-2">Cambiar Habitación</h4>
-      <div class="mb-2">
-        <label for="nuevaHabitacion" class="block text-sm font-medium text-gray-700">
-          Seleccionar nueva habitación:
-        </label>
-        <select id="nuevaHabitacion" v-model="nuevaHabitacionId"
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-          <option value="" disabled>Seleccione una habitación</option>
-          <option v-for="habitacion in habitacionesDisponibles" :key="habitacion.id" :value="habitacion.id">
-            {{ habitacion.numero }} ({{ habitacion.tipo }})
-          </option>
-        </select>
-      </div>
-      <div class="mb-2">
-        <label for="motivoCambio" class="block text-sm font-medium text-gray-700">
-          Motivo del cambio:
-        </label>
-        <input id="motivoCambio" v-model="motivoCambio" type="text"
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          placeholder="Ej. Solicitud del cliente" />
-      </div>
-      <div class="flex justify-end space-x-2">
-        <button @click="toggleCambiarHabitacion"
-          class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">
-          Cancelar
-        </button>
-        <button @click="cambiarHabitacion" :disabled="!nuevaHabitacionId || !motivoCambio"
-          class="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
-          :class="{ 'opacity-50 cursor-not-allowed': !nuevaHabitacionId || !motivoCambio }">
-          Confirmar
-        </button>
+      class="absolute right-6 top-16 mt-2 w-72 bg-white border rounded-md shadow-lg z-20 p-4">
+      <h4 class="text-sm font-semibold mb-3">Cambiar Habitación</h4>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Nueva habitación</label>
+          <select v-model="nuevaHabitacionId"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+            <option value="" disabled>Seleccione una habitación</option>
+            <option v-for="hab in habitacionesDisponibles" :key="hab.id" :value="hab.id">
+              {{ hab.numero }} ({{ hab.tipo }})
+            </option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Motivo del cambio</label>
+          <input v-model="motivoCambio" type="text" placeholder="Ej. Solicitud del cliente"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" />
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button @click="toggleCambiarHabitacion"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded hover:bg-gray-300">
+            Cancelar
+          </button>
+          <button @click="cambiarHabitacion" :disabled="!nuevaHabitacionId || !motivoCambio"
+            class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            Confirmar
+          </button>
+        </div>
       </div>
     </div>
 
@@ -73,17 +76,24 @@
     <h3 class="text-lg font-bold">Habitación {{ room.numero }}</h3>
     <p><strong>Tipo:</strong> {{ room.tipo }}</p>
     <p><strong>Precio por noche:</strong> ${{ room.precio_noche }}</p>
-    <p><strong>Estado:</strong> {{ room.estado_actual }}</p>
+    <p><strong>Estado:</strong> <span class="font-medium">{{ capitalizar(room.estado_actual) }}</span></p>
     <p>
       <strong>Última limpieza:</strong>
-      {{ room.ultima_limpieza ? new Date(room.ultima_limpieza).toLocaleDateString() : 'No registrada' }}
+      {{ room.ultima_limpieza ? new Date(room.ultima_limpieza).toLocaleDateString('es-ES') : 'No registrada' }}
     </p>
+  </div>
+
+  <!-- Skeleton mientras carga (opcional pero queda pro) -->
+  <div v-else class="relative p-4 rounded-lg shadow-md border-l-4 mb-4 bg-gray-50 border-gray-300 animate-pulse">
+    <div class="h-7 bg-gray-200 rounded w-32 mb-3"></div>
+    <div class="h-4 bg-gray-200 rounded w-48 mb-2"></div>
+    <div class="h-4 bg-gray-200 rounded w-40 mb-2"></div>
+    <div class="h-4 bg-gray-200 rounded w-36"></div>
   </div>
 </template>
 
 <script>
 import { router } from '@inertiajs/vue3';
-import axios from 'axios';
 
 export default {
   name: 'RoomCard',
@@ -91,99 +101,127 @@ export default {
     room: {
       type: Object,
       required: true,
+      default: () => ({})
     },
     asignacionVigente: {
       type: Object,
-      default: null,
+      default: null
     },
     habitacionesDisponibles: {
       type: Array,
-      default: () => [],
-    },
+      default: () => []
+    }
   },
+
   data() {
     return {
       mostrarMenu: false,
       mostrarFormularioCambio: false,
-      estados: ['disponible', 'mantenimiento', 'limpieza'],
       nuevaHabitacionId: '',
       motivoCambio: '',
+
+      // REGLAS DE TRANSICIÓN (aquí está toda la magia)
+      transicionesPermitidas: {
+        disponible: ['limpieza', 'mantenimiento'],
+        limpieza: ['disponible', 'mantenimiento'],
+        mantenimiento: ['disponible', 'limpieza'],
+        ocupada: [] // no se permite cambiar estado directamente
+      }
     };
   },
+
+  computed: {
+    cardClasses() {
+      const estado = this.room?.estado_actual || '';
+      switch (estado) {
+        case 'disponible': return 'bg-green-100 border-green-500';
+        case 'ocupada': return 'bg-red-100 border-red-500';
+        case 'mantenimiento': return 'bg-blue-100 border-blue-500';
+        case 'limpieza': return 'bg-yellow-100 border-yellow-500';
+        default: return 'bg-gray-100 border-gray-400';
+      }
+    },
+
+    estadosDisponibles() {
+      const actual = this.room?.estado_actual;
+      if (!actual) return [];
+      return this.transicionesPermitidas[actual] || [];
+    }
+  },
+
   mounted() {
     document.addEventListener('click', this.handleClickOutside);
-    console.log('Habitaciones disponibles en RoomCard:', this.habitacionesDisponibles);
   },
-  mounted() {
-    document.addEventListener('click', this.handleClickOutside);
-  },
+
   beforeUnmount() {
     document.removeEventListener('click', this.handleClickOutside);
   },
-  computed: {
-    cardClasses() {
-      switch (this.room.estado_actual) {
-        case 'disponible':
-          return 'bg-green-100 border-green-500';
-        case 'ocupada':
-          return 'bg-red-100 border-red-500';
-        case 'mantenimiento':
-          return 'bg-blue-100 border-blue-500';
-        case 'limpieza':
-          return 'bg-yellow-100 border-yellow-500';
-        default:
-          return 'bg-gray-100 border-gray-400';
-      }
-    },
-  },
+
   methods: {
     toggleMenu() {
       this.mostrarMenu = !this.mostrarMenu;
-      this.mostrarFormularioCambio = false; // Cerrar el formulario de cambio si está abierto
+      this.mostrarFormularioCambio = false;
     },
+
     toggleCambiarHabitacion() {
       this.mostrarFormularioCambio = !this.mostrarFormularioCambio;
-      this.mostrarMenu = false; // Cerrar el menú de estados si está abierto
+      this.mostrarMenu = false;
     },
+
     handleClickOutside(event) {
-      if (this.mostrarMenu && !this.$refs.cardContainer.contains(event.target)) {
+      if (this.$refs.cardContainer && !this.$refs.cardContainer.contains(event.target)) {
         this.mostrarMenu = false;
-      }
-      if (this.mostrarFormularioCambio && !this.$refs.cardContainer.contains(event.target)) {
         this.mostrarFormularioCambio = false;
       }
     },
+
     cambiarEstado(nuevoEstado) {
-      this.mostrarMenu = false;
+      if (!this.estadosDisponibles.includes(nuevoEstado)) {
+        alert('Transición no permitida');
+        return;
+      }
+
+      this.mostrarMenu = false; 
+
       router.put(
         route('habitaciones.actualizarEstado', this.room.id),
         { estado_actual: nuevoEstado },
-        { preserveScroll: true, preserveState: true }
+        {
+          preserveScroll: true,
+          preserveState: true,
+          replace: true,        
+        }
       );
     },
+
     cambiarHabitacion() {
       if (!this.nuevaHabitacionId || !this.motivoCambio) return;
+
+      this.mostrarFormularioCambio = false; 
+
       router.post(
         route('habitaciones.cambiarHabitacion', this.room.id),
         {
           nueva_habitacion_id: this.nuevaHabitacionId,
           motivo_cambio: this.motivoCambio,
-          asignacion_id: this.asignacionVigente?.id,
+          asignacion_id: this.asignacionVigente?.id
         },
         {
           preserveScroll: true,
           preserveState: true,
+          replace: true,        
           onSuccess: () => {
-            this.mostrarFormularioCambio = false;
             this.nuevaHabitacionId = '';
             this.motivoCambio = '';
-          },
+          }
         }
       );
     },
+
     capitalizar(texto) {
+      if (!texto) return '';
       return texto.charAt(0).toUpperCase() + texto.slice(1);
-    },
-  },
+    }
+  }
 };
 </script>

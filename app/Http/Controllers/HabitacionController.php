@@ -115,19 +115,20 @@ class HabitacionController extends Controller
         // Fecha actual
         $fechaActual = Carbon::now()->toDateString();
 
-        // Actualizar la asignación existente con fecha_fin como la fecha actual
-        $asignacion->update([
-            'fecha_fin' => $fechaActual,
-        ]);
-
         // Crear un nuevo registro para la nueva habitación
         $nuevaAsignacion = new Asignaciones_habitacion();
         $nuevaAsignacion->reserva_id = $asignacion->reserva_id;
         $nuevaAsignacion->habitacion_id = $nuevaHabitacion->id;
         $nuevaAsignacion->fecha_inicio = $fechaActual;
         $nuevaAsignacion->fecha_fin = $asignacion->fecha_fin; // Conserva la fecha_fin original
+        $nuevaAsignacion->reserva_detalle_id = $asignacion->reserva_detalle_id;
         $nuevaAsignacion->motivo_cambio = $request->motivo_cambio;
         $nuevaAsignacion->save();
+
+        // Actualizar la asignación existente con fecha_fin como la fecha actual
+        $asignacion->update([
+            'fecha_fin' => $fechaActual,
+        ]);
 
         // Actualizar estados de las habitaciones
         $habitacionActual->estado_actual = 'limpieza';
