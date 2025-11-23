@@ -236,19 +236,22 @@ class ReservaController extends Controller
     {
         $rows = DB::table('reservas as r')
             ->leftJoin('huespedes as hu', 'hu.id', '=', 'r.huesped_id')
-            ->leftJoin('personas  as p',  'p.huesped_id',  '=', 'hu.id')
-            ->leftJoin('empresas  as e',  'e.huesped_id',  '=', 'hu.id')
+            ->leftJoin('personas as p',  'p.huesped_id',  '=', 'hu.id')
+            ->leftJoin('empresas as e',  'e.huesped_id',  '=', 'hu.id')
 
             // join con detalles (folios)
             ->leftJoin('reserva_detalles as rd', 'rd.reserva_id', '=', 'r.id')
 
-            // join con asignaciones por detalle
-            ->leftJoin('asignaciones_habitacion as ah', 'ah.reserva_detalle_id', '=', 'rd.id')
+            ->leftJoin('asignaciones_habitacion as ah', function ($join) {
+                $join->on('ah.reserva_detalle_id', '=', 'rd.id')
+                    ->whereRaw('ah.id = (SELECT MAX(id) FROM asignaciones_habitacion WHERE reserva_detalle_id = rd.id)');
+            })
 
             ->leftJoin('habitaciones as h', 'h.id', '=', 'ah.habitacion_id')
 
             ->orderByDesc('r.id')
             ->orderBy('h.numero')
+
             ->select([
                 DB::raw('COALESCE(rd.estado, r.estado) as estado'),
 
@@ -268,21 +271,19 @@ class ReservaController extends Controller
                 'h.tipo as habitacion_tipo',
 
                 DB::raw("
-        CASE 
-            WHEN hu.tipo_huesped = 'persona'
-                THEN TRIM(CONCAT(COALESCE(p.apellido,''), ' ', COALESCE(p.nombre,'')))
-            WHEN hu.tipo_huesped = 'empresa'
-                THEN COALESCE(e.razon_social, '')
-            ELSE '—'
-        END AS huesped_nombre
-    "),
+                CASE 
+                    WHEN hu.tipo_huesped = 'persona'
+                        THEN TRIM(CONCAT(COALESCE(p.apellido,''), ' ', COALESCE(p.nombre,'')))
+                    WHEN hu.tipo_huesped = 'empresa'
+                        THEN COALESCE(e.razon_social, '')
+                    ELSE '—'
+                END AS huesped_nombre
+            "),
             ])
-
-
             ->get();
 
         return Inertia::render('Reservas/Index', [
-            'reservas' => $rows, // 1 fila por asignación, o por detalle si no hay asignaciones
+            'reservas' => $rows,
         ]);
     }
 
