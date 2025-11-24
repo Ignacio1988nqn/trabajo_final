@@ -13,26 +13,66 @@ use App\Models\ReservaDetalle;
 
 class GastosController extends Controller
 {
+
     public function index()
     {
+        $reservas = Reservas::with([
+            'huesped.personas',
+            'huesped.empresas',
+            'detalles' => function ($q) {
+                $q->select('id', 'reserva_id', 'estado');
+            }
+        ])
+            ->orderByDesc('id')
+            ->get();
+
         return Inertia::render('Gastos/GastosIndex', [
-            'reservas' => Reservas::with([
-                'huesped.personas',
-                'huesped.empresas'
-            ])
-                ->orderByDesc('id')
-                ->get()
-                ->map(function ($reserva) {
-                    return [
-                        'id' => $reserva->id,
-                        'cliente' => $reserva->huesped
-                            ? ($reserva->huesped->tipo_huesped === 'persona'
-                                ? ($reserva->huesped->personas?->apellido . ' ' . $reserva->huesped->personas?->nombre)
-                                : $reserva->huesped->empresas?->razon_social)
-                            : 'Huésped no encontrado',
-                        'fecha_inicio' => $reserva->fecha_checkin,
-                    ];
-                }),
+            'reservas' => $reservas->map(function ($reserva) {
+
+                $habitacionesConEstado = collect();
+
+                foreach ($reserva->detalles as $detalle) {
+                    $asignacion = Asignaciones_habitacion::vigente()
+                        ->where('reserva_detalle_id', $detalle->id)
+                        ->orderByDesc('id')
+                        ->first();
+
+                    if ($asignacion?->habitacion) {
+                        $habitacionesConEstado->push([
+                            'numero' => $asignacion->habitacion->numero,
+                            'estado' => $detalle->estado,
+                        ]);
+                    }
+                }
+
+                $habitacionTexto = $habitacionesConEstado->pluck('numero')->implode(', ');
+                $habitacionesData = $habitacionesConEstado->toArray();
+
+                $fechaInicio = $reserva->fecha_checkin
+                    ? \Carbon\Carbon::parse($reserva->fecha_checkin)->format('d \d\e F')
+                    : null;
+
+                $fechaFin = $reserva->fecha_checkout
+                    ? \Carbon\Carbon::parse($reserva->fecha_checkout)->format('d \d\e F')
+                    : '—';
+
+                $totalGastos = $reserva->gastos()->sum('monto') ?? 0;
+
+                return [
+                    'id'                 => $reserva->id,
+                    'cliente'            => $reserva->huesped
+                        ? ($reserva->huesped->tipo_huesped === 'persona'
+                            ? trim(($reserva->huesped->personas?->apellido ?? '') . ' ' . ($reserva->huesped->personas?->nombre ?? ''))
+                            : ($reserva->huesped->empresas?->razon_social ?? 'Sin razón social'))
+                        : 'Huésped no encontrado',
+                    'habitacion_numero'  => $habitacionTexto ?: '—',
+                    'habitaciones_data'  => $habitacionesData,
+                    'fecha_inicio'       => $fechaInicio,
+                    'fecha_fin'          => $fechaFin,
+                    'estado'             => $reserva->estado ?? 'desconocido',
+                    'total_gastos'       => $totalGastos,
+                ];
+            }),
         ]);
     }
 
@@ -41,39 +81,55 @@ class GastosController extends Controller
         $detalle->load([
             'reserva.huesped.personas',
             'reserva.huesped.empresas',
-            'asignacionesHabitacion.habitacion',
             'gastos.item',
         ]);
 
+        $ultimaAsignacion = DB::table('asignaciones_habitacion')
+            ->where('reserva_detalle_id', $detalle->id)
+            ->orderByDesc('id')
+            ->first();
+
+        $habitacionActual = $ultimaAsignacion
+            ? DB::table('habitaciones')->where('id', $ultimaAsignacion->habitacion_id)->first()
+            : null;
+
         return inertia('Gastos/GastosShow', [
             'detalleReserva' => $detalle,
-            'gastos' => $detalle->gastos,
+            'gastos'         => $detalle->gastos,
+            'habitacionActual' => $habitacionActual,
+            'checkinDetalle'   => $detalle->fecha_checkin,
         ]);
     }
-
-
     public function create(ReservaDetalle $detalle)
     {
         $detalle->load([
             'reserva.huesped.personas',
             'reserva.huesped.empresas',
-            'asignacionesHabitacion.habitacion',
         ]);
 
         if ($detalle->estado !== 'checkin') {
             return redirect()->back()->with('error', 'Solo se pueden cargar gastos en estado check-in');
         }
 
+        $ultimaAsignacion = DB::table('asignaciones_habitacion')
+            ->where('reserva_detalle_id', $detalle->id)
+            ->orderByDesc('id')
+            ->first();
+
+        $habitacionActual = $ultimaAsignacion
+            ? DB::table('habitaciones')->where('id', $ultimaAsignacion->habitacion_id)->first()
+            : null;
+
         $items = GastoItems::orderBy('nombre')->get(['id', 'nombre', 'precio', 'tipo', 'stock']);
         $tipos = GastoItems::select('tipo')->distinct()->pluck('tipo');
 
         return Inertia::render('Gastos/Create', [
-            'detalleReserva' => $detalle,
-            'items'          => $items,
-            'tipos'          => $tipos,
+            'detalleReserva'   => $detalle,
+            'habitacionActual' => $habitacionActual,
+            'items'            => $items,
+            'tipos'            => $tipos,
         ]);
     }
-
 
     public function store(Request $request)
     {
@@ -114,20 +170,34 @@ class GastosController extends Controller
 
     public function asignaciones($reservaId)
     {
+
         $asignaciones = DB::table('reserva_detalles as rd')
-            ->join('asignaciones_habitacion as ah', 'ah.reserva_detalle_id', '=', 'rd.id')
-            ->join('habitaciones as h', 'h.id', '=', 'ah.habitacion_id')
+            ->leftJoin('asignaciones_habitacion as ah', function ($join) {
+                $join->on('ah.reserva_detalle_id', '=', 'rd.id')
+                    ->whereRaw('ah.id = (
+                 SELECT MAX(ah2.id) 
+                 FROM asignaciones_habitacion ah2 
+                 WHERE ah2.reserva_detalle_id = rd.id
+             )');
+            })
+            ->leftJoin('habitaciones as h', 'h.id', '=', 'ah.habitacion_id')
+            ->leftJoin('gastos as g', 'g.reserva_detalle_id', '=', 'rd.id')
             ->where('rd.reserva_id', $reservaId)
+            ->groupBy(
+                'rd.id',
+                'h.numero',
+                'rd.fecha_checkin',
+                'rd.fecha_checkout',
+                'rd.estado'
+            )
             ->select(
                 'rd.id as detalle_id',
-                'h.id as habitacion_id',
                 'h.numero as habitacion_numero',
-                'ah.id as asignacion_id',
                 'rd.fecha_checkin',
                 'rd.fecha_checkout',
                 'rd.estado',
-                'ah.fecha_inicio as fecha_inicio_asignada',
-                'ah.fecha_fin as fecha_fin_asignada'
+
+                DB::raw('COALESCE(SUM(g.monto), 0) as total_gastos')
             )
             ->get();
 
@@ -136,7 +206,8 @@ class GastosController extends Controller
 
         return Inertia::render('Gastos/Asignaciones', [
             'reserva'      => $reserva,
-            'asignaciones' => $asignaciones
+            'asignaciones' => $asignaciones,
+
         ]);
     }
 }

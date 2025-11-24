@@ -29,16 +29,18 @@ function confirmCheckout(detalleId) {
   })
 }
 
-function fmt(d) {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString('es-ES', {
+const fmt = (fecha) => {
+  if (!fecha) return '—';
+
+  const [year, month, day] = fecha.split('T')[0].split('-');
+  const date = new Date(year, month - 1, day);
+
+  return date.toLocaleDateString('es-ES', {
     year: 'numeric',
-    month: 'short',
+    month: 'long',
     day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
+  });
+};
 </script>
 
 <template>
@@ -71,7 +73,7 @@ function fmt(d) {
                     Habitación
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Check-in Real
+                    Check-in
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Check-out Planeado
@@ -93,10 +95,10 @@ function fmt(d) {
                     </span>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm">
-                    {{ fmt(r.fecha_checkin_real) }}
+                    {{ fmt(r.reserva_checkin) }}
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm">
-                    {{ fmt(r.checkout_asignado) }}
+                    {{ fmt(r.reserva_checkout) }}
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button @click="confirmCheckout(r.detalle_id)"

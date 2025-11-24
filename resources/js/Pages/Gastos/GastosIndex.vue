@@ -38,10 +38,6 @@
                                     </th>
                                     <th
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Estado
-                                    </th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Acciones
                                     </th>
                                 </tr>
@@ -60,44 +56,43 @@
                                         {{ reserva.cliente || reserva.huesped_nombre || 'Sin nombre' }}
                                     </td>
 
-                                    <!-- Habitación -->
+                                    <!-- Habitación con colores según estado del detalle -->
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span
-                                            class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800">
-                                            {{ reserva.habitacion_numero || '—' }}
-                                        </span>
+                                        <div class="flex flex-wrap gap-2">
+                                            <template v-for="hab in reserva.habitaciones_data" :key="hab.numero">
+                                                <span
+                                                    class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
+                                                    :class="{
+                                                        'bg-yellow-100 text-yellow-900': hab.estado === 'pendiente',
+                                                        'bg-green-100 text-green-900': hab.estado === 'checkin',
+                                                        'bg-red-100 text-red-800': hab.estado === 'checkout',
+                                                        'bg-red-100 text-red-900': hab.estado === 'cancelado',
+                                                        'bg-gray-100 text-gray-700': !hab.estado || hab.estado === 'desconocido'
+                                                    }"
+                                                    :title="hab.estado ? hab.estado.charAt(0).toUpperCase() + hab.estado.slice(1) : 'Sin estado'">
+                                                    {{ hab.numero }}
+                                                </span>
+                                            </template>
+                                            <span v-if="!reserva.habitaciones_data.length"
+                                                class="text-gray-400 text-xs">—</span>
+                                        </div>
                                     </td>
 
-                                    <!-- Rango de fechas -->
+                                    <!-- Estancia (fechas perfectas) -->
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                         <div class="flex flex-col">
                                             <span class="text-xs text-gray-500">In</span>
-                                            {{ formatFecha(reserva.fecha_inicio) || formatFecha(reserva.checkin_det) }}
+                                            <span class="font-medium">{{ reserva.fecha_inicio ?? '—' }}</span>
                                             <span class="text-xs text-gray-500 mt-1">Out</span>
-                                            {{ formatFecha(reserva.fecha_fin) || formatFecha(reserva.checkout_det) ||
-                                            '—' }}
+                                            <span class="font-medium">{{ reserva.fecha_fin }}</span>
                                         </div>
                                     </td>
+
 
                                     <!-- Total Gastos (puedes calcularlo en el backend o con un computed) -->
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                                         {{ reserva.total_gastos ? '$' + Number(reserva.total_gastos).toLocaleString() :
-                                        '$0' }}
-                                    </td>
-
-                                    <!-- Estado de la reserva -->
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span
-                                            class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full capitalize"
-                                            :class="{
-                                                'bg-yellow-100 text-yellow-800': ['pendiente', 'confirmada'].includes(reserva.estado),
-                                                'bg-green-100 text-green-800': reserva.estado === 'checkin',
-                                                'bg-blue-100 text-blue-800': reserva.estado === 'checkout',
-                                                'bg-red-100 text-red-800': reserva.estado === 'cancelada',
-                                                'bg-gray-100 text-gray-800': !reserva.estado
-                                            }">
-                                            {{ reserva.estado || 'desconocido' }}
-                                        </span>
+                                            '$0' }}
                                     </td>
 
                                     <!-- Botón Ver detalle -->
@@ -150,10 +145,12 @@ defineProps({
         default: () => [],
     },
 });
-
 const formatFecha = (fecha) => {
-    if (!fecha) return 'Fecha no disponible';
-    return new Date(fecha).toLocaleDateString('es-ES', {
+    if (!fecha) return '—';
+    const [year, month, day] = fecha.split('T')[0].split('-');
+    const date = new Date(year, month - 1, day); // ¡Esto ignora el timezone!
+
+    return date.toLocaleDateString('es-ES', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
