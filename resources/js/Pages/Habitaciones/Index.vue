@@ -72,7 +72,7 @@
                         </p>
                     </div>
 
-                    <div class="p-8 lg:p-10">
+                    <div class="p-8 lg:p-10" style="margin-bottom: 135px">
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
                             <RoomCard v-for="habitacion in habitaciones" :key="habitacion.id" :room="habitacion"
                                 :asignacion-vigente="habitacion.asignacion_vigente"

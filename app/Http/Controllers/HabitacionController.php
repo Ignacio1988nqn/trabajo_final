@@ -48,13 +48,10 @@ class HabitacionController extends Controller
             $habitaciones->where('numero', 'like', $numero . '%');
         }
 
+        $habitaciones->orderByRaw('CAST(numero AS UNSIGNED)');
         $habitaciones = $habitaciones->get();
-
-        // Obtener habitaciones disponibles
         $habitacionesDisponibles = Habitaciones::whereIn('estado_actual', ['disponible'])->get();
-        // \Log::debug('Habitaciones disponibles enviadas:', $habitacionesDisponibles->toArray());
 
-        // Obtener asignaciones vigentes para cada habitación
         $asignacionesVigentes = Asignaciones_habitacion::vigente()->get()->keyBy('habitacion_id');
 
         return Inertia::render('Habitaciones/Index', [
@@ -107,30 +104,24 @@ class HabitacionController extends Controller
             return redirect()->back()->withErrors(['error' => 'La asignación no corresponde a la habitación actual.']);
         }
 
-        // Validar que la nueva habitación esté disponible o en limpieza
         if (!in_array($nuevaHabitacion->estado_actual, ['disponible', 'limpieza'])) {
             return redirect()->back()->withErrors(['error' => 'La nueva habitación no está disponible.']);
         }
-
-        // Fecha actual
         $fechaActual = Carbon::now()->toDateString();
 
-        // Crear un nuevo registro para la nueva habitación
         $nuevaAsignacion = new Asignaciones_habitacion();
         $nuevaAsignacion->reserva_id = $asignacion->reserva_id;
         $nuevaAsignacion->habitacion_id = $nuevaHabitacion->id;
         $nuevaAsignacion->fecha_inicio = $fechaActual;
-        $nuevaAsignacion->fecha_fin = $asignacion->fecha_fin; // Conserva la fecha_fin original
+        $nuevaAsignacion->fecha_fin = $asignacion->fecha_fin; 
         $nuevaAsignacion->reserva_detalle_id = $asignacion->reserva_detalle_id;
         $nuevaAsignacion->motivo_cambio = $request->motivo_cambio;
         $nuevaAsignacion->save();
 
-        // Actualizar la asignación existente con fecha_fin como la fecha actual
         $asignacion->update([
             'fecha_fin' => $fechaActual,
         ]);
 
-        // Actualizar estados de las habitaciones
         $habitacionActual->estado_actual = 'limpieza';
         $nuevaHabitacion->estado_actual = 'ocupada';
         $habitacionActual->save();

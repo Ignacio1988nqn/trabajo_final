@@ -4,14 +4,10 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { computed } from 'vue'
 
 const props = defineProps({
-  detalleReserva: {
-    type: Object,
-    required: true
-  },
-  gastos: {
-    type: Array,
-    default: () => []
-  }
+  detalleReserva: Object,
+  gastos: Array,
+  habitacionActual: Object,
+  checkinDetalle: [String, Date]
 })
 
 const tipoNombre = (gasto) => {
@@ -27,55 +23,47 @@ const tipoClase = (gasto) => {
     servicios: 'bg-orange-100 text-orange-800',
   }[tipo] || 'bg-gray-100 text-gray-800'
 }
-
-// Datos útiles
 const detalle = computed(() => props.detalleReserva)
-const reserva = computed(() => props.detalleReserva?.reserva)
-const huesped = computed(() => reserva.value?.huesped)
-const asignacion = computed(() => detalle.value?.asignacionesHabitacion?.[0])
-const habitacion = computed(() => asignacion.value?.habitacion)
+const reserva = computed(() => detalle.value?.reserva)
+const nombreCliente = computed(() => {
+  const h = reserva.value?.huesped
+  if (!h) return 'Sin huésped'
 
-// Nombre del huésped
-const nombreHuesped = computed(() => {
-  if (!huesped.value) return 'Sin huésped'
-
-  if (huesped.value.tipo_huesped === 'persona') {
-    const p = huesped.value.personas?.[0]
-    return p ? `${p.nombre} ${p.apellido}`.trim() : 'Persona sin nombre'
+  if (h.tipo_huesped === 'persona') {
+    const p = h.personas?.[0] || h.personas
+    return p ? `${p.nombre} ${p.apellido}`.trim() : 'Sin nombre'
   }
-  if (huesped.value.tipo_huesped === 'empresa') {
-    const e = huesped.value.empresas?.[0]
-    return e?.razon_social || 'Empresa sin razón social'
+  if (h.tipo_huesped === 'empresa') {
+    const e = h.empresas?.[0] || h.empresas
+    return e?.razon_social || 'Sin razón social'
   }
   return 'Huésped desconocido'
 })
 
-// Formato fecha
 const formatFecha = (fecha) => {
-  if (!fecha) return '—'
-  return new Date(fecha).toLocaleDateString('es-AR', {
+  if (!fecha) return '—';
+
+  const [year, month, day] = fecha.split('T')[0].split('-');
+  const date = new Date(year, month - 1, day);
+
+  return date.toLocaleDateString('es-ES', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
+  });
+};
 
-// Formato moneda
 const formatMonto = (monto) => {
   const valor = parseFloat(monto || 0)
   return valor.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })
 }
 
-// Total de gastos
 const totalGastos = computed(() => {
   if (!props.gastos?.length) return '$0,00'
   const total = props.gastos.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0)
   return formatMonto(total)
 })
 
-// FIX: ahora detecta "checkin" aunque venga en minúscula, mayúscula o con espacios
 const puedeCargarGastos = computed(() => {
   return ['checkin', 'Checkin', 'CHECKIN'].includes(detalle.value?.estado?.trim())
 })
@@ -95,23 +83,23 @@ const puedeCargarGastos = computed(() => {
     <div class="py-12">
       <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
 
-        <!-- Info del huésped y habitación -->
         <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
           <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div>
-                <p class="text-sm text-gray-600">Huésped</p>
-                <p class="font-bold text-lg">{{ nombreHuesped }}</p>
+                <p class="text-sm text-gray-600">Cliente</p>
+                <p class="font-bold text-lg">{{ nombreCliente }}</p>
               </div>
+
               <div>
                 <p class="text-sm text-gray-600">Habitación</p>
                 <p class="font-bold text-indigo-600 text-xl">
-                  {{ habitacion?.numero ? `Hab. ${habitacion.numero}` : 'Sin asignar' }}
+                  {{ habitacionActual?.numero ? `Hab. ${habitacionActual.numero}` : 'Sin asignar' }}
                 </p>
               </div>
               <div>
-                <p class="text-sm text-gray-600">Check-in Real</p>
-                <p class="font-medium">{{ formatFecha(detalle.fecha_checkin) }}</p>
+                <p class="text-sm text-gray-600">Check-in</p>
+                <p class="font-medium">{{ formatFecha(checkinDetalle) }}</p>
               </div>
               <div>
                 <p class="text-sm text-gray-600">Estado</p>
@@ -127,7 +115,6 @@ const puedeCargarGastos = computed(() => {
             </div>
           </div>
         </div>
-
         <!-- Acciones: Cargar gasto + Volver -->
         <div class="flex justify-between items-center mb-6">
           <div v-if="puedeCargarGastos">

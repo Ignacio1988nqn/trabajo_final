@@ -6,7 +6,7 @@
     <template #header>
       <h2 class="text-xl font-semibold leading-tight text-gray-800">
         Cargar Gasto —
-        Hab. {{ habitacionNumero }} (Detalle #{{ detalleReserva.id }})
+        Hab. {{ habitacionActual.numero }} (Detalle #{{ detalleReserva.id }})
       </h2>
     </template>
 
@@ -16,27 +16,33 @@
           <div class="p-8">
 
             <!-- Info del huésped -->
-            <div class="mb-8 p-6 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg border">
+            <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+              <h3 class="text-lg font-bold mb-4">Datos de la Reserva</h3>
               <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <span class="text-sm text-gray-600">Huésped</span>
-                  <p class="font-bold text-xl text-indigo-700">{{ nombreHuesped }}</p>
+                  <p class="text-sm text-gray-600">Cliente</p>
+                  <p class="font-bold text-lg">
+                    {{ nombreCliente }}
+                  </p>
                 </div>
                 <div>
-                  <span class="text-sm text-gray-600">Habitación</span>
-                  <p class="font-bold text-2xl text-indigo-600">Hab. {{ habitacionNumero }}</p>
+                  <p class="text-sm text-gray-600">Habitación</p>
+                  <p class="font-bold text-indigo-600 text-xl">
+                    {{ habitacionActual?.numero ? `Hab. ${habitacionActual.numero}` : 'Sin asignar' }}
+                  </p>
                 </div>
-                <div class="text-right">
-                  <span class="inline-block px-4 py-2 bg-green-100 text-green-800 rounded-full font-bold text-sm">
-                    {{ detalleReserva.estado?.toUpperCase() }}
-                  </span>
+                <div>
+                  <p class="text-sm text-gray-600">Check-in</p>
+                  <p class="font-medium">
+                    {{ formatFecha(detalleReserva.fecha_checkin) }}
+                  </p>
                 </div>
+
               </div>
             </div>
 
             <!-- Formulario -->
             <form @submit.prevent="submit" class="space-y-6">
-              <!-- Tipo de gasto -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de gasto</label>
                 <select v-model="selectedTipo" required
@@ -136,14 +142,15 @@ import { ref, computed, watch } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 
 const props = defineProps({
-  detalleReserva: { type: Object, required: true },
-  items: { type: Array, required: true },
-  tipos: { type: Array, required: true },
+  detalleReserva: Object,
+  habitacionActual: Object,  // ← viene del backend
+  items: Array,
+  tipos: Array,
 })
+
 
 const today = new Date().toISOString().split('T')[0]
 
-// Formulario
 const form = useForm({
   reserva_detalle_id: props.detalleReserva.id,
   gasto_item_id: '',
@@ -155,9 +162,9 @@ const imagenError = ref(false)
 
 const imagenUrl = computed(() => {
   if (!form.gasto_item_id) return null
-  
+
   const id = form.gasto_item_id
-  const timestamp = new Date().getTime() 
+  const timestamp = new Date().getTime()
   return `/storage/gastoitems/gastoitem_${id}.jpg?t=${timestamp}`
 
 })
@@ -181,13 +188,36 @@ const stockInsuficiente = computed(() => {
   return stock !== null && form.cantidad > stock
 })
 
-const nombreHuesped = computed(() => {
-  const h = props.detalleReserva?.reserva?.huesped
+const detalle = computed(() => props.detalleReserva)
+const reserva = computed(() => detalle.value?.reserva)
+const nombreCliente = computed(() => {
+  const h = reserva.value?.huesped
   if (!h) return 'Sin huésped'
-  if (h.tipo_huesped === 'persona') return h.personas?.[0] ? `${h.personas[0].nombre} ${h.personas[0].apellido}` : 'Sin nombre'
-  if (h.tipo_huesped === 'empresa') return h.empresas?.[0]?.razon_social || 'Sin razón social'
-  return 'Desconocido'
+
+  if (h.tipo_huesped === 'persona') {
+    const p = h.personas?.[0] || h.personas
+    return p ? `${p.nombre} ${p.apellido}`.trim() : 'Sin nombre'
+  }
+  if (h.tipo_huesped === 'empresa') {
+    const e = h.empresas?.[0] || h.empresas
+    return e?.razon_social || 'Sin razón social'
+  }
+  return 'Huésped desconocido'
 })
+
+
+const formatFecha = (fecha) => {
+  if (!fecha) return '—';
+
+  const [year, month, day] = fecha.split('T')[0].split('-');
+  const date = new Date(year, month - 1, day);
+
+  return date.toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+};
 
 const habitacionNumero = computed(() => {
   return props.detalleReserva.asignacionesHabitacion?.[0]?.habitacion?.numero || 'Sin asignar'
@@ -222,4 +252,4 @@ function submit() {
     },
   });
 }
- </script>
+</script>

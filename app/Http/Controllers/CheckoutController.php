@@ -19,13 +19,13 @@ class CheckoutController extends Controller
             ->join('huespedes as hu', 'hu.id', '=', 'r.huesped_id')
             ->leftJoin('personas as p', 'p.huesped_id', '=', 'hu.id')
             ->leftJoin('empresas as e', 'e.huesped_id', '=', 'hu.id')
-
             ->join('reserva_detalles as rd', 'rd.reserva_id', '=', 'r.id')
-            ->join('asignaciones_habitacion as ah', 'ah.reserva_detalle_id', '=', 'rd.id')
-            ->join('habitaciones as h', 'h.id', '=', 'ah.habitacion_id')
-
-            ->where('rd.estado', 'checkin')
-
+            ->leftJoin('asignaciones_habitacion as ah', function ($join) {
+                $join->on('ah.reserva_detalle_id', '=', 'rd.id')
+                    ->whereRaw('ah.id = (SELECT MAX(ah2.id) FROM asignaciones_habitacion ah2 WHERE ah2.reserva_detalle_id = rd.id)');
+            })
+            ->leftJoin('habitaciones as h', 'h.id', '=', 'ah.habitacion_id')
+            ->where('rd.estado', 'checkin') 
             ->orderByDesc('r.id')
             ->orderBy('h.numero')
 
@@ -35,14 +35,11 @@ class CheckoutController extends Controller
                 'rd.estado          as estado',
                 'r.estado           as reserva_estado',
                 'rd.estado          as detalle_estado',
-
                 'r.fecha_reserva',
                 'rd.fecha_checkin   as reserva_checkin',
                 'rd.fecha_checkout  as reserva_checkout',
-
                 'ah.fecha_inicio    as fecha_checkin_real',
                 'ah.fecha_fin       as checkout_asignado',
-
                 'h.id               as habitacion_id',
                 'h.numero           as habitacion_numero',
                 'h.estado_actual    as habitacion_estado',

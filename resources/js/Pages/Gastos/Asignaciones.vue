@@ -1,4 +1,5 @@
 <template>
+
   <Head title="Habitaciones asignadas a la reserva" />
 
   <AuthenticatedLayout>
@@ -47,13 +48,17 @@
                     Habitación
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Check-in Asignado
+                    Check-in (Planificado)
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Check-out Asignado
+                    Check-out (Planificado)
                   </th>
+
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Estado
+                  </th>
+                  <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total Gastos
                   </th>
                   <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Acciones
@@ -65,37 +70,66 @@
                   <td class="px-6 py-4 text-sm text-gray-600">
                     #{{ a.detalle_id }}
                   </td>
-                  <td class="px-6 py-4 font-bold text-indigo-600">
-                    Hab. {{ a.habitacion_numero }}
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex flex-wrap gap-2">
+                      <template v-if="a.habitacion_numero">
+                        <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full" :class="{
+                          'bg-yellow-100 text-yellow-900': a.estado === 'pendiente',
+                          'bg-green-100 text-green-900': a.estado === 'checkin',
+                          'bg-red-100 text-red-800': a.estado === 'checkout',
+                          'bg-red-100 text-red-900': a.estado === 'cancelado',
+                          'bg-gray-100 text-gray-700': !a.estado || a.estado === 'desconocido'
+                        }" :title="a.estado ? a.estado.charAt(0).toUpperCase() + a.estado.slice(1) : 'Sin estado'">
+                          {{ a.habitacion_numero }}
+                        </span>
+                      </template>
+                      <span v-else class="text-gray-400 text-xs">
+                        Sin habitación
+                      </span>
+                    </div>
                   </td>
-                  <td class="px-6 py-4 text-sm">
-                    {{ formatFecha(a.fecha_inicio_asignada) }}
+                  <td class="px-6 py-4 text-sm font-medium">
+                    {{ formatFecha(a.fecha_checkin) }}
                   </td>
-                  <td class="px-6 py-4 text-sm">
-                    {{ formatFecha(a.fecha_fin_asignada) }}
+                  <td class="px-6 py-4 text-sm font-medium">
+                    {{ a.fecha_checkout ? formatFecha(a.fecha_checkout) : '—' }}
                   </td>
+
                   <td class="px-6 py-4">
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
-                          :class="{
-                            'bg-green-100 text-green-800': a.estado === 'checkin',
-                            'bg-red-100 text-red-800': a.estado === 'checkout',
-                            'bg-yellow-100 text-yellow-800': a.estado === 'pendiente',
-                            'bg-gray-100 text-gray-800': !a.estado
-                          }">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium" :class="{
+                      'bg-green-100 text-green-800': a.estado === 'checkin',
+                      'bg-red-100 text-red-800': a.estado === 'checkout',
+                      'bg-yellow-100 text-yellow-800': a.estado === 'pendiente',
+                      'bg-gray-100 text-gray-800': !a.estado
+                    }">
                       {{ a.estado ? a.estado.toUpperCase() : 'SIN ESTADO' }}
                     </span>
                   </td>
-                  <td class="px-6 py-4 text-center">
-                    <Link 
-                      :href="route('gastos.show', a.detalle_id)"
-                      class="inline-flex items-center px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700 transition shadow-sm"
-                    >
-                      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                      </svg>
-                      Ver Gastos
+                  <td class="px-6 py-4 text-right text-sm font-bold text-gray-900">
+                    ${{ Number(a.total_gastos).toLocaleString('es-AR') }}
+                  </td>
+                  <td class="px-6 py-4 text-center space-y-2">
+                    <!-- Ver Gastos (siempre visible) -->
+                    <Link :href="route('gastos.show', a.detalle_id)"
+                      class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 transition shadow-sm">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    Ver Gastos
+                    </Link>
+
+                    <Link v-if="a.estado === 'checkin'" :href="route('gastos.create', a.detalle_id)"
+                      class="inline-flex items-center px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700 transition shadow-sm">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Cargar Gasto
                     </Link>
                   </td>
+
                 </tr>
 
                 <tr v-if="!asignaciones.length">
@@ -109,11 +143,10 @@
 
           <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
             <Link href="/gastos" class="text-sm font-medium text-gray-600 hover:text-gray-900">
-              ← Volver al listado
+            ← Volver al listado
             </Link>
           </div>
         </div>
-
       </div>
     </div>
   </AuthenticatedLayout>
@@ -152,12 +185,18 @@ const nombreCliente = computed(() => {
   return "Huésped desconocido"
 })
 
-const formatFecha = (f) => {
-  if (!f) return "---"
-  return new Date(f).toLocaleDateString("es-AR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric"
-  })
-}
+const formatFecha = (fecha) => {
+  if (!fecha) return '—';
+
+  const [year, month, day] = fecha.split('T')[0].split('-');
+  const date = new Date(year, month - 1, day);
+
+  return date.toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+};
+
+
 </script>
