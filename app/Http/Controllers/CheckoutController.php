@@ -25,7 +25,7 @@ class CheckoutController extends Controller
                     ->whereRaw('ah.id = (SELECT MAX(ah2.id) FROM asignaciones_habitacion ah2 WHERE ah2.reserva_detalle_id = rd.id)');
             })
             ->leftJoin('habitaciones as h', 'h.id', '=', 'ah.habitacion_id')
-            ->where('rd.estado', 'checkin') 
+            ->where('rd.estado', 'checkin')
             ->orderByDesc('r.id')
             ->orderBy('h.numero')
 
@@ -63,21 +63,29 @@ class CheckoutController extends Controller
 
     public function checkout($detalleId)
     {
-
         $detalle = ReservaDetalle::findOrFail($detalleId);
 
-        if (!in_array($detalle->estado, ['checkin', 'pendiente'])) {
+        if ($detalle->estado !== 'checkin') {
             return back()->withErrors([
-                'error' => 'El detalle ya no está pendiente.'
+                'error' => 'Esta reserva no está en check-in.'
             ]);
         }
 
+        $hoy = now();
         $detalle->update([
-            'estado' => 'checkout',
+            'estado'              => 'checkout',
+            'fecha_checkout' => $hoy,
         ]);
 
-        $asig = $detalle->asignacionesHabitacion()->first();
+        $asig = Asignaciones_habitacion::where('reserva_detalle_id', $detalle->id)
+            ->orderByDesc('id')
+            ->first();
+
         if ($asig) {
+            $asig->update([
+                'fecha_fin' => $hoy,
+            ]);
+
             $asig->habitacion()->update([
                 'estado_actual' => 'limpieza'
             ]);
@@ -85,6 +93,6 @@ class CheckoutController extends Controller
 
         return redirect()
             ->route('checkout.index')
-            ->with('success', 'Check-out realizado.');
+            ->with('success', 'Check-out realizado correctamente.');
     }
 }

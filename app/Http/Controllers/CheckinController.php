@@ -67,20 +67,20 @@ class CheckinController extends Controller
         // FILTRO: CHECKIN HOY (modo real)
         // ===============================
         if ($mode === 'hoy') {
-            $query->whereDate('ah.fecha_inicio', '<=', $hoy)
+            $query->whereDate('rd.fecha_checkin', '<=', $hoy)
                 ->where(function ($q) use ($hoy) {
-                    $q->whereNull('ah.fecha_fin')
-                        ->orWhereDate('ah.fecha_fin', '>=', $hoy);
+                    $q->whereNull('rd.fecha_checkout')
+                        ->orWhereDate('rd.fecha_checkout', '>=', $hoy);
                 });
 
             // =================================================
             // FILTRO: CHECKIN PLANIFICADO (usa fechas del detalle)
             // =================================================
         } else {
-            $query->whereDate('ah.fecha_inicio', '<=', DB::raw('COALESCE(rd.fecha_checkin, ah.fecha_inicio)'))
+            $query->whereDate('rd.fecha_checkin', '<=', DB::raw('COALESCE(rd.fecha_checkin, ah.fecha_inicio)'))
                 ->where(function ($q) {
-                    $q->whereNull('ah.fecha_fin')
-                        ->orWhereColumn('ah.fecha_fin', '>=', DB::raw('COALESCE(rd.fecha_checkin, ah.fecha_inicio)'));
+                    $q->whereNull('rd.fecha_checkout')
+                        ->orWhereColumn('rd.fecha_checkout', '>=', DB::raw('COALESCE(rd.fecha_checkin, ah.fecha_inicio)'));
                 });
         }
 
@@ -94,7 +94,6 @@ class CheckinController extends Controller
 
     public function checkin($detalleId)
     {
-
         $detalle = ReservaDetalle::findOrFail($detalleId);
 
         if ($detalle->estado !== 'pendiente') {
@@ -103,17 +102,28 @@ class CheckinController extends Controller
             ]);
         }
 
-        $detalle->update([
-            'estado' => 'checkin',
-        ]);
-
-        // opcional: marcar habitación como ocupada
+        // Obtener la asignación y la habitación
         $asig = $detalle->asignacionesHabitacion()->first();
-        if ($asig) {
-            $asig->habitacion()->update([
-                'estado_actual' => 'ocupada'
+
+        if (!$asig) {
+            return back()->withErrors([
+                'error' => 'No hay habitación asignada.'
             ]);
         }
+
+        $habitacion = $asig->habitacion;
+
+        if ($habitacion->estado_actual === 'ocupada') {
+            return back()->withErrors([
+                'error' => "La habitación {$habitacion->numero} ya está ocupada. \n Por favor verifica CheckOuts pendientes."
+            ]);
+        }
+
+        // Todo bien → hacer check-in
+        $detalle->update(['estado' => 'checkin']);
+
+        // Marcar como ocupada
+        $habitacion->update(['estado_actual' => 'ocupada']);
 
         return redirect()
             ->route('checkin.index')

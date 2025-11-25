@@ -57,14 +57,13 @@ function fmt(d) {
 </script>
 
 <template>
+
     <Head title="Check In" />
 
     <AuthenticatedLayout>
         <template #header>
             <div>
-                <h1
-                    class="text-2xl font-semibold tracking-tight text-[#0F3D3E]"
-                >
+                <h1 class="text-2xl font-semibold tracking-tight text-[#0F3D3E]">
                     Check-in de Reservas
                 </h1>
                 <p class="mt-1 text-sm text-neutral-500">
@@ -77,10 +76,7 @@ function fmt(d) {
             <CheckinFilterToggle :mode="props.ref_mode" />
         </div>
 
-        <div
-            v-if="$page.props.errors?.error"
-            class="mb-4 rounded bg-red-100 p-3 text-red-700"
-        >
+        <div v-if="$page.props.errors?.error" class="mb-4 rounded bg-red-100 p-3 text-red-700">
             {{ $page.props.errors.error }}
         </div>
 
@@ -92,99 +88,74 @@ function fmt(d) {
                             <thead class="bg-gray-50">
                                 <tr>
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                    >
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Reserva
                                     </th>
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                    >
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Huésped
                                     </th>
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                    >
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Habitación
                                     </th>
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                    >
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Fecha de Reserva
                                     </th>
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                    >
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Check-in (asig.)
                                     </th>
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                    >
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Check-out (asig.)
                                     </th>
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                    >
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Estado
                                     </th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                    >
+                                    <th v-if="props.ref_mode === 'hoy'"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Acciones
                                     </th>
                                 </tr>
                             </thead>
 
-                            <tbody
-                                v-if="props.reservas.length"
-                                class="bg-white divide-y divide-gray-200"
-                            >
-                                <tr
-                                    v-for="r in props.reservas"
-                                    :key="r.asignacion_id"
-                                    class="hover:bg-gray-50 transition-colors duration-200"
-                                >
+                            <tbody v-if="props.reservas.length" class="bg-white divide-y divide-gray-200">
+                                <tr v-for="r in props.reservas" :key="r.asignacion_id"
+                                    class="hover:bg-gray-50 transition-colors duration-200">
                                     <!-- Nro. Reserva -->
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
-                                    >
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                         #{{ r.reserva_id }}
                                     </td>
 
                                     <!-- Huésped -->
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
-                                    >
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                         {{ r.huesped_nombre }}
                                     </td>
 
                                     <!-- Habitación (badge bonito) -->
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span
-                                            class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800"
-                                        >
+                                            class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800">
                                             {{ r.habitacion_numero }}
                                         </span>
                                     </td>
 
                                     <!-- Fecha de reserva -->
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-600"
-                                    >
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                         {{ fmt(r.fecha_reserva) }}
                                     </td>
 
                                     <!-- Check-in asignado -->
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-600"
-                                    >
-                                        {{ fmt(r.checkin_det) }}
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                        {{ fmt(r.reserva_checkin) }}
                                     </td>
 
                                     <!-- Check-out asignado -->
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-600"
-                                    >
-                                        {{ fmt(r.checkout_det) }}
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                        {{ fmt(r.reserva_checkout) }}
                                     </td>
 
                                     <!-- Estado (mismo esquema de colores que las otras tablas) -->
@@ -206,24 +177,29 @@ function fmt(d) {
                                                     'checkout',
                                                     'cancelada',
                                                 ].includes(r.estado),
-                                            }"
-                                        >
+                                            }">
                                             {{ r.estado || "desconocido" }}
                                         </span>
                                     </td>
 
                                     <!-- Botón de Check-in -->
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm font-medium"
-                                    >
-                                        <button
-                                            @click="
-                                                confirmCheckin(r.detalle_id)
-                                            "
-                                            class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition"
-                                        >
+                                    <!-- FILA: solo renderiza la celda si estamos en modo 'hoy' -->
+                                    <td v-if="props.ref_mode === 'hoy'"
+                                        class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <button v-if="r.estado === 'pendiente'" @click="confirmCheckin(r.detalle_id)"
+                                            class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 transition"
+                                            title="Hacer check-in ahora">
+                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M11 16l-4-4m0 0l4-4m-4 4h14" />
+                                            </svg>
                                             Check-in
                                         </button>
+
+                                        <span v-else class="text-gray-500 text-xs">
+                                            Ya ingresó
+                                        </span>
                                     </td>
                                 </tr>
                             </tbody>
@@ -231,22 +207,11 @@ function fmt(d) {
                             <!-- Sin reservas -->
                             <tbody v-else>
                                 <tr>
-                                    <td
-                                        colspan="8"
-                                        class="px-6 py-12 text-center text-gray-500 bg-gray-50"
-                                    >
-                                        <svg
-                                            class="mx-auto h-12 w-12 text-gray-400 mb-4"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                            />
+                                    <td colspan="8" class="px-6 py-12 text-center text-gray-500 bg-gray-50">
+                                        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none"
+                                            stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                         </svg>
                                         <p class="text-lg font-medium">
                                             No hay reservas pendientes de
