@@ -15,7 +15,7 @@ class CheckinController extends Controller
 
     public function index()
     {
-        $mode = request('ref', 'plan'); // ?ref=plan | ?ref=hoy
+        $mode = request('ref', 'hoy'); // ?ref=plan | ?ref=hoy
         $hoy  = now()->toDateString();
 
         $query = DB::table('reservas as r')

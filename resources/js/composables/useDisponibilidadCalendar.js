@@ -23,7 +23,11 @@ export function useCalendarioDisponibilidad(props) {
       preserveState: true,
       replace: true,
     })
-
+  // const go = (params) =>
+  //   router.get(route('disponibilidad.calendario'), params, {
+  //     preserveState: false, // mejor forzar refresco completo de props
+  //     replace: true,
+  //   })
   const hoy = new Date().toISOString().slice(0, 10)
 
   const colorState = (state) =>

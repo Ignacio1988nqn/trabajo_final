@@ -78,7 +78,11 @@ class DisponibilidadController extends Controller
                         $w->whereNull('fecha_fin')
                             ->orWhere('fecha_fin', '>', $start->toDateString());
                     })
-                    ->with(['reserva.huesped.personas', 'reserva.huesped.empresas']);
+                    ->with([
+                        'reserva.huesped.personas',
+                        'reserva.huesped.empresas',
+                        'reservaDetalle',              // 👈 agregamos esto
+                    ]);
             }])
             ->orderBy('tipo')
             ->orderBy('numero');
@@ -101,77 +105,86 @@ class DisponibilidadController extends Controller
         }
 
         $roomDTO = $rooms->map(function ($h) use ($start, $end) {
-            $bookings = $h->asignaciones->map(function ($a) use ($start, $end) {
-                $ci = Carbon::parse($a->fecha_inicio)->startOfDay();
-                $co = $a->fecha_fin ? Carbon::parse($a->fecha_fin)->startOfDay() : null;
+            $bookings = $h->asignaciones
+                ->unique('id')
+                ->map(function ($a) use ($start, $end) {
+                    $ci = Carbon::parse($a->fecha_inicio)->startOfDay();
+                    $co = $a->fecha_fin ? Carbon::parse($a->fecha_fin)->startOfDay() : null;
 
-                $visibleStart = $ci->max($start);
-                $visibleEnd   = ($co ?? $end)->min($end);
+                    $visibleStart = $ci->max($start);
+                    $visibleEnd   = ($co ?? $end)->min($end);
 
-                // $reserva = $a->reserva;
-                // $huesped = '—';
-                // if ($reserva && $reserva->huesped) {
-                //     $p = $reserva->huesped->personas;
-                //     $e = $reserva->huesped->empresas;
-                //     $huesped = $p
-                //         ? trim(($p->apellido ?? '') . ' ' . ($p->nombre ?? ''))
-                //         : ($e->razon_social ?? '—');
-                // }
-                $reserva = $a->reserva;
-                $huesped = '—';
+                    // ---------- HUESPED ----------
+                    $reserva = $a->reserva;
+                    $huesped = '—';
 
-                if ($reserva && $reserva->huesped) {
-                    $hModel = $reserva->huesped;
+                    if ($reserva && $reserva->huesped) {
+                        $hModel = $reserva->huesped;
 
-                    $p = $hModel->personas;
-                    $e = $hModel->empresas;
+                        $p = $hModel->personas;
+                        $e = $hModel->empresas;
 
-                    $parts = [];
+                        $parts = [];
 
-                    // Si hay persona, la agregamos
-                    if ($p) {
-                        $parts[] = trim(($p->apellido ?? '') . ' ' . ($p->nombre ?? ''));
+                        if ($p) {
+                            $parts[] = trim(($p->apellido ?? '') . ' ' . ($p->nombre ?? ''));
+                        }
+
+                        if ($e) {
+                            $parts[] = $e->razon_social ?? '';
+                        }
+
+                        $huesped = count($parts)
+                            ? implode(' / ', array_filter($parts))
+                            : 'Sin datos';
                     }
 
-                    // Si hay empresa, también la agregamos
-                    if ($e) {
-                        $parts[] = $e->razon_social ?? '';
-                    }
+                    // ---------- ESTADO SEGÚN reserva_detalles ----------
+                    $detalle       = $a->reservaDetalle;
+                    $estadoDetalle = $detalle?->estado ?? 'pendiente';
 
-                    // Unimos lo que haya con " / "
-                    if (count($parts)) {
-                        $huesped = implode(' / ', array_filter($parts));
-                    } else {
-                        $huesped = 'Sin datos';
-                    }
-                }
+                    $state = match ($estadoDetalle) {
+                        'checkin'   => 'ocupada',
+                        'checkout'  => 'checkout',
+                        'cancelada' => 'cancelada',
+                        default     => 'pendiente',
+                    };
 
-                $estadoReserva = $reserva?->estado ?? 'pendiente';
-                $state = match ($estadoReserva) {
-                    'checkin'   => 'ocupada',
-                    'checkout'  => 'checkout',
-                    'cancelada' => 'cancelada',
-                    default     => 'pendiente',
-                };
+                    return [
+                        'id'         => $a->id,
+                        'reserva_id' => $reserva?->id,
+                        'huesped'    => $huesped,
+                        'start'      => $visibleStart->toDateString(),
+                        'end'        => $visibleEnd->toDateString(),
+                        'full_start' => $ci->toDateString(),
+                        'full_end'   => $co?->toDateString(),
+                        'state'      => $state,
+                    ];
+                })
+                ->values();
 
+            // 👇 Consideramos "ocupada" si tiene algún booking pendiente u ocupada
+            $hayReservaActiva = $bookings->contains(
+                fn($b) => in_array($b['state'], ['ocupada', 'pendiente'])
+            );
 
-                return [
-                    'id'         => $a->id,
-                    'reserva_id' => $reserva?->id,
-                    'huesped'    => $huesped,
-                    'start'      => $visibleStart->toDateString(),
-                    'end'        => $visibleEnd->toDateString(),
-                    'full_start' => $ci->toDateString(),
-                    'full_end'   => $co?->toDateString(),
-                    'state'      => $state,
-                ];
-            })->values();
+            // 👇 Estado visual para la chip de la izquierda
+            if ($hayReservaActiva) {
+                // Si hay reserva en curso (checkin o pendiente), se muestra como OCUPADA
+                $estadoVisual = 'ocupada';
+            } elseif (in_array($h->estado_actual, ['limpieza', 'mantenimiento'])) {
+                // Solo mostramos limpieza/mantenimiento cuando no hay reservas activas
+                $estadoVisual = $h->estado_actual;
+            } else {
+                $estadoVisual = 'disponible';
+            }
 
-            $blocks = in_array($h->estado_actual, ['mantenimiento', 'limpieza'])
+            // Bloques de limpieza / mantenimiento en la grilla
+            $blocks = in_array($estadoVisual, ['mantenimiento', 'limpieza'])
                 ? [[
                     'start' => null,
                     'end'   => null,
-                    'state' => $h->estado_actual,
+                    'state' => $estadoVisual,
                 ]]
                 : [];
 
@@ -179,7 +192,7 @@ class DisponibilidadController extends Controller
                 'id'       => $h->id,
                 'numero'   => $h->numero,
                 'tipo'     => $h->tipo,
-                'estado'   => $h->estado_actual,
+                'estado'   => $estadoVisual, // 👈 usamos este
                 'bookings' => $bookings,
                 'blocks'   => $blocks,
             ];

@@ -13,35 +13,55 @@ class EstadisticasController extends Controller
 {
     private function buildKpis()
     {
-        $estados = Habitaciones::select('estado_actual', DB::raw('count(*) as total'))
-            ->groupBy('estado_actual')
-            ->pluck('total', 'estado_actual');
+        $hoy = Carbon::today()->toDateString();
 
+        // Total de habitaciones del hotel
         $totalHabitaciones = Habitaciones::count();
-        $disponibles = $estados['disponible'] ?? 0;
-        $ocupadas    = $estados['ocupada'] ?? 0;
 
+        // Habitaciones ocupadas HOY:
+        // - asignación cuyo rango incluye hoy
+        // - y cuyo reserva_detalle.estado = 'checkin'
+        $ocupadasHoy = Asignaciones_habitacion::query()
+            ->where('fecha_inicio', '<=', $hoy)
+            ->where(function ($q) use ($hoy) {
+                $q->whereNull('fecha_fin')
+                    ->orWhere('fecha_fin', '>', $hoy);
+            })
+            ->whereHas('reservaDetalle', function ($q) {
+                $q->where('estado', 'checkin');   // 👈 estado real del detalle
+            })
+            ->distinct('habitacion_id')
+            ->count('habitacion_id');
+
+        // Habitaciones disponibles hoy
+        $disponiblesHoy = $totalHabitaciones - $ocupadasHoy;
+
+        // Porcentaje
         $ocupacionHoy = $totalHabitaciones > 0
-            ? round(($ocupadas / $totalHabitaciones) * 100, 1)
+            ? round(($ocupadasHoy / $totalHabitaciones) * 100)
             : 0;
 
-        $checkinsHoy = DB::table('reservas')
-            ->whereDate('fecha_checkin', Carbon::today()->toDateString())
+        // ✅ Check-ins PENDIENTES para hoy
+        $checkinsHoy = DB::table('reserva_detalles')
+            ->whereDate('fecha_checkin', $hoy)
+            ->where('estado', 'pendiente')
             ->count();
-
         return [
-            'estados' => $estados,
             'kpis' => [
                 'ocupacion_hoy'            => $ocupacionHoy,
-                'habitaciones_disponibles' => $disponibles,
+                'habitaciones_disponibles' => $disponiblesHoy,
                 'checkins_hoy'             => $checkinsHoy,
             ],
         ];
     }
     public function index(Request $request)
     {    // obtenés kpis y estados en un solo lugar
-        $kpiData = $this->buildKpis();
-        $estados = $kpiData['estados'];
+        // $kpiData = $this->buildKpis();
+
+        $estados = Habitaciones::select('estado_actual', DB::raw('count(*) as total'))
+            ->groupBy('estado_actual')
+            ->pluck('total', 'estado_actual');
+
 
         // === 2️⃣ Ocupación mensual (hasta el día actual) ===
         $hoy = Carbon::today();

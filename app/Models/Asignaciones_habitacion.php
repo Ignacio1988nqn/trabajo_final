@@ -11,7 +11,7 @@ class Asignaciones_habitacion extends Model
 {
     protected $table = 'asignaciones_habitacion';
     public $timestamps = false;
-    protected $fillable = ['reserva_id', 'habitacion_id', 'fecha_inicio', 'fecha_fin', 'motivo_cambio','reserva_detalle_id','reserva_detalle_id'];
+    protected $fillable = ['reserva_id', 'habitacion_id', 'fecha_inicio', 'fecha_fin', 'motivo_cambio', 'reserva_detalle_id', 'reserva_detalle_id'];
 
     public function reserva()
     {

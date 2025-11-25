@@ -90,6 +90,7 @@ class ReservaController extends Controller
             }
         }
 
+
         // 4) Persistencia
         DB::transaction(function () use ($data, $fechaCheckin, $fechaCheckout) {
             $reserva = Reservas::create([
@@ -345,12 +346,19 @@ class ReservaController extends Controller
      * Chequea solape de una habitación contra [ini, fin].
      * Regla: conflictos si existe [inicio_ex, fin_ex) tal que ini < fin_ex y fin > inicio_ex
      */
-    private function hayConflictoEnHabitacion(int $habitacionId, string $ini, string $fin): bool
-    {
-        // Conflicto si existe un rango [inicio_ex, fin_ex) tal que ini < fin_ex y fin > inicio_ex
+    private function hayConflictoEnHabitacion(
+        int $habitacionId,
+        string $ini,
+        string $fin,
+        ?int $ignorarAsignacionId = null
+    ): bool {
         return Asignaciones_habitacion::where('habitacion_id', $habitacionId)
+            ->when($ignorarAsignacionId, fn($q) => $q->where('id', '!=', $ignorarAsignacionId))
             ->where('fecha_inicio', '<', $fin)
-            ->where('fecha_fin',    '>', $ini)
+            ->where(function ($q) use ($ini) {
+                $q->where('fecha_fin', '>', $ini)
+                    ->orWhereNull('fecha_fin');   // 👈 reservas abiertas
+            })
             ->exists();
     }
 }
