@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
         // Registrar seeders
         $this->call([
             HabitacionSeeder::class,
+            ReservasHistoricasSeeder::class,
             // ...agregá aquí otros seeders si tenés (GastoItemsSeeder, etc.)
         ]);
     }
