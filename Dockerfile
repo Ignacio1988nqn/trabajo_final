@@ -32,7 +32,7 @@ RUN npm install
 RUN npm run build
 
 # Limpiar caches de Laravel
-RUN php artisan optimize:clear
+# RUN php artisan optimize:clear
 
 # Permisos
 RUN chmod -R 777 storage bootstrap/cache
