@@ -3,27 +3,25 @@
 namespace App\Providers;
 
 use Illuminate\Support\Facades\Vite;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
 use App\Models\MenuUsuario;
 use Illuminate\Support\Facades\Auth;
 
-
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
         //
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
+        if (app()->environment('production')) {
+            URL::forceScheme('https');
+        }
+
         Inertia::share('menu', function () {
             $user = Auth::user();
             if (!$user) return [];
@@ -35,6 +33,7 @@ class AppServiceProvider extends ServiceProvider
                 ->orderBy('orden')
                 ->get();
         });
+
         Vite::prefetch(concurrency: 3);
     }
 }
